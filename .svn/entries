@@ -1,0 +1,89 @@
+8
+
+dir
+1237
+http://doxey.info/svn/repository/dylan/sandbox/dylan.cpan/Lingua-Translate-Google-0.01
+http://doxey.info/svn/repository
+
+
+
+2008-11-16T19:08:40.917453Z
+1237
+
+
+
+svn:special svn:externals svn:needs-lock
+
+
+
+
+
+
+
+
+
+
+
+725e29b5-6328-4bfa-96c0-23e7dd418ca5
+
+t
+dir
+
+lib
+dir
+
+MANIFEST
+file
+
+
+
+
+2008-11-16T19:08:22.000000Z
+3091690c4f1aa6279527efcdc85c886e
+2008-11-16T19:08:40.917453Z
+1237
+
+META.yml
+file
+
+
+
+
+2008-11-16T19:08:22.000000Z
+23a0dc619a729592de14d5a6119d6a56
+2008-11-16T19:08:40.917453Z
+1237
+
+Makefile.PL
+file
+
+
+
+
+2008-11-16T19:08:22.000000Z
+d406708b97b21d07c7819683bd28ba71
+2008-11-16T19:08:40.917453Z
+1237
+
+Changes
+file
+
+
+
+
+2008-11-16T19:08:22.000000Z
+008c377ec3cf350f29d1a3e35f7d8cd8
+2008-11-16T19:08:40.917453Z
+1237
+
+README
+file
+
+
+
+
+2008-11-16T19:08:22.000000Z
+ca57a2ccad4eb3a796f32f0c052e083b
+2008-11-16T19:08:40.917453Z
+1237
+
