@@ -9,7 +9,7 @@
 #
 package Lingua::Translate::Google;
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 use strict;
 use Carp;
@@ -367,7 +367,7 @@ __END__
 
 =head1 NAME
 
-Lingua::Translate::Google 0.01 - Translation back-end for Google's beta translation service.
+Lingua::Translate::Google 0.02 - Translation back-end for Google's beta translation service.
 
 =head1 SYNOPSIS
 
