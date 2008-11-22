@@ -1,5 +1,8 @@
 Revision history for Perl extension Lingua::Translate::Google.
 
+0.03  Sun Nov 22 12:00:00 2008
+    - Cleaned up the POD
+
 0.02  Wed Nov 20 20:00:00 2008
     - Repaired malformed archive for re-upload.
 

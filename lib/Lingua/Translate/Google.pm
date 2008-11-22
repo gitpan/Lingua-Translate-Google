@@ -9,7 +9,7 @@
 #
 package Lingua::Translate::Google;
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 use strict;
 use Carp;
@@ -367,7 +367,7 @@ __END__
 
 =head1 NAME
 
-Lingua::Translate::Google 0.02 - Translation back-end for Google's beta translation service.
+Lingua::Translate::Google - Translation back-end for Google's beta translation service.
 
 =head1 SYNOPSIS
 
@@ -386,6 +386,7 @@ Lingua::Translate::Google 0.02 - Translation back-end for Google's beta translat
  # prints 'My hovercraft is full of eels'
  print $xl8r->translate('Mein Luftkissenfahrzeug ist voller Aale');
 
+
 =head1 DESCRIPTION
 
 Lingua::Translate::Google is a translation back-end for Lingua::Translate that contacts Google (http://ajax.googleapis.com/ajax/services/language/translate/) to do the real work.
@@ -400,42 +401,31 @@ One way or another, by using Google services (either directly or via this module
 
 =over
 
-=item Please read: 
+=item Please read:
 
 http://www.google.com/accounts/TOS
 
-=item To obtain your own API key: 
+=item To obtain your own API key:
 
 http://code.google.com/apis/ajaxfeeds/signup.html
 
 =back
 
+
 =head1 CONSTRUCTOR
 
 =head2 new(src => $lang, dest => lang)
 
-=over
-
-Creates a new translation handle. 
+Creates a new translation handle.
 Determines whether the requested language pair is available and will croak if not.
 
-=back
-
-=head3 paramters
-
 =over
 
-=over
-
-=head2 src
+=item src
 
 Source language, in RFC-3066 form.  See L<I18N::LangTags> for a discussion of RFC-3066 language tags.
 
-=back
-
-=over
-
-=head2 dest
+=item dest
 
 Destination Language
 
@@ -443,49 +433,43 @@ Destination Language
 
 Other options that may be passed to the config() function (see below) may also be passed as arguments to this constructor.
 
-=back
 
 =head1 METHODS
 
 The following methods may be called on Lingua::Translate::Google objects.
 
+
 =head2 available() : @list
 
-=over
-
-Returns a list of available language pairs, in the form of 'XX_YY', where XX is the source language and YY is the destination. 
+Returns a list of available language pairs, in the form of 'XX_YY', where XX is the source language and YY is the destination.
 If you want the english name of a language tag, call I18N::LangTags::List::name() on it.  See L<I18N::LangTags::List>.
 
-This method contacts Google (http://translate.google.com/translate_a/t?) to calculate available language pairs. 
+This method contacts Google (http://translate.google.com/translate_a/t?) to calculate available language pairs.
 The data about available language pairs is cached in memory.
 
-=back
 
 =head2 translate($text) : $translated
 
-=over
+Translates the given text, or die's on any kind of error.
 
-Translates the given text, or die's on any kind of error. 
-
-It is assumed that the $text coming in is UTF-8 encoded, and that Google will be returning UTF-8 encoded text. In the case that Google returns some other encoding, then an attempt to convert the result to UTF-8 is made with Unicode::MapUTF8::to_utf8. Observation has indicated that the fallback service (at /translate_a/t) is inclined to return windows-1255 encoded text, despite the value of the 'Accept-Charset' header sent in the request. However, a non-windows user agent string seems to remedy this. 
+It is assumed that the $text coming in is UTF-8 encoded, and that Google will be returning UTF-8 encoded text. In the case that Google returns some other encoding, then an attempt to convert the result to UTF-8 is made with Unicode::MapUTF8::to_utf8. Observation has indicated that the fallback service (at /translate_a/t) is inclined to return windows-1255 encoded text, despite the value of the 'Accept-Charset' header sent in the request. However, a non-windows user agent string seems to remedy this.
 
 Also, the primary service (at googleapis.com) returns JSON which assumes the client is JavaScript running with an HTML document. This being the case strings are double encoded. First special characters are converted to HTML entities, and then the ampersands are converted to unicode escape sequences. For example, the string "Harold's" is encoded as "Harold\u0027#39;s". The translate function attempts to return plain old UTF-8 encoded strings without any entities or escape sequences.
 
-=back
 
 =head2 agent() : LWP::UserAgent
 
-=over
-
 Returns the LWP::UserAgent object used to contact Google.
 
-=back
 
 =head1 CONFIGURATION FUNCTIONS
+
 
 =head2 config( option => $value, )
 
 This function sets defaults for use when constructing objects. Options include:
+
+=over
 
 =item google_uri
 
@@ -494,24 +478,26 @@ The uri to use when contacting Google.
 The default value is
 
 "http://ajax.googleapis.com/ajax/services/language/translate?"
-     v=1.0
-    &q=hello%20world
-    &langpair=en%7Cit
-    &key=yourapikey
+
+  v=1.0
+ &q=hello%20world
+ &langpair=en%7Cit
+ &key=yourapikey
 
 For details see:
 http://code.google.com/apis/ajaxlanguage/documentation/#fonje
 
-Another possibility is:
+Another (yet currently unsported) possibility is:
 
 "http://www.google.com/uds/Gtranslate?"
-     v=1.0
-    &q=hello%20world
-    &langpair=en%7Czh-TW
-    &callback=google.language.callbacks.id101
-    &context=22
-    &key=notsupplied
-    &key=yourapikey
+
+  v=1.0
+ &q=hello%20world
+ &langpair=en%7Czh-TW
+ &callback=google.language.callbacks.id101
+ &context=22
+ &key=notsupplied
+ &key=yourapikey
 
 =item google_fallback_uri
 
@@ -520,10 +506,11 @@ The URI used when contacting Google, and no api_key is provided.
 The default value is
 
 "http://translate.google.com/translate_a/t?"
-     client=t
-    &text=hello%20world
-    &sl=en
-    &tl=zh-Tw
+
+  client=t
+ &text=hello%20world
+ &sl=en
+ &tl=zh-Tw
 
 Note, Google states clearly that they want you to obtain and use an API key, and also include a valid and accurate referer URL.
 
@@ -541,17 +528,25 @@ The size to break chunks into before handing them off to Google. The default val
 
 The number of times to retry contacting Google if the first attempt fails. The default value is "2".
 
+=back
+
+
 =head1 BUGS/TODO
 
 The chunk_size attribute is a hold-over from the Babelfish algorithm. It is TBD as to what chunk size ought to be set for Google.
+
+There might be a better way to get the available language pairs.
+
 
 =head1 SEE ALSO
 
 L<Lingua::Translate>, L<Lingua::Translate::Babelfish>, L<LWP::UserAgent>, L<Unicode::MapUTF8>
 
+
 =head1 ACKNOWLEDGEMENTS
 
 This is a rewritten copy of Lingua::Translate::Babelfish by Sam Vilain <enki@snowcra.sh>.
+
 
 =head1 AUTHOR
 
