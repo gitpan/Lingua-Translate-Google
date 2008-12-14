@@ -1,5 +1,13 @@
 Revision history for Perl extension Lingua::Translate::Google.
 
+0.04  Sat Dec 13 11:38:00 2008
+    - Ensures there is an acceptable referer and warns when 
+      faking Google out with it's own URL as the referer. This
+      change fixes the 403 Forbidden errors being returned for the
+      fallback service when no API key is supplied.
+    - Fixed broken available method and added ability to use 
+      available to check for availability of a given lang tag.
+
 0.03  Sun Nov 22 12:00:00 2008
     - Cleaned up the POD
 

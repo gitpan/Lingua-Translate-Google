@@ -1,20 +1,59 @@
 #!/usr/bin/perl
 
 use strict;
-use Test::More tests => 5;
+
+use Test::More qw( no_plan );
+use I18N::LangTags qw(is_language_tag);
 
 my $Text_In  = 'My hovercraft is full of eels.';
 my $Text_Out = 'Mein Luftkissenfahrzeug ist voller Aale.';
 my $API_Key  = 'mock_api_key';
 
-use_ok("Lingua::Translate::Google");
+my $module = 'Lingua::Translate::Google';
+my @methods = qw(
+    new
+    translate
+    available
+    agent
+    config
+);
+use_ok($module);
+can_ok($module, @methods);
+
+
 
 my $xl8r = Lingua::Translate::Google->new(src => "en", dest => "de");
 
 ok(UNIVERSAL::isa($xl8r, "Lingua::Translate::Google"),
    "Lingua::Translate::Google->new()");
 
+# Validate the list of available languages
 {
+    my @available_langpairs = $xl8r->available();
+
+    isa_ok( \@available_langpairs, 'ARRAY', 'available returns an array' );
+
+    ok( @available_langpairs > 0, 'available returns results' );
+
+    my %lang_tags;
+    for my $langpair ( @available_langpairs ) {
+        
+        my ($sl,$tl) = split /_/, $langpair;
+        
+        $lang_tags{$sl} = 1;
+        $lang_tags{$tl} = 1;
+    }
+    for my $lang_tag (keys %lang_tags) {
+        
+        ok( is_language_tag($lang_tag), "$lang_tag is a valid I18N language tag" );
+    }
+}
+
+# Override LWP::UserAgent::request 
+# and verify correct output for mocked translation service.
+{
+    no warnings 'once';
+
     # Intercepts the network request and returns a sensible value.
     # Thus, the test assumes that LWP::UserAgent::request and Google
     # working correctly.
@@ -66,7 +105,10 @@ ok(UNIVERSAL::isa($xl8r, "Lingua::Translate::Google"),
     );
 
     # test translation with API key
-    $xl8r->config( api_key => 'mock_api_key' );
+    $xl8r->config( 
+        api_key => 'mock_api_key',
+        referer => 'http://mock.tld/dir'
+    );
     $translated_result = $xl8r->translate($Text_In);
     like(
         $translated_result,
