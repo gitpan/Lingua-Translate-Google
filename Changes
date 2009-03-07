@@ -1,5 +1,13 @@
 Revision history for Perl extension Lingua::Translate::Google.
 
+0.05  Fri Mar 06 23:37:00 2009
+    - Dropped use of Pod::Constants in favor of Readonly due 
+      to taint errors when perl with -T. 
+    - Dropped use of fallback translation service. It's either
+      googleapis.com or nothing.
+    - Updates to POD.
+    - Eliminated the redefine warning in the test.
+
 0.04  Sat Dec 13 11:38:00 2008
     - Ensures there is an acceptable referer and warns when 
       faking Google out with it's own URL as the referer. This

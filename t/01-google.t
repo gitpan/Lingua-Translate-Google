@@ -3,7 +3,7 @@
 use strict;
 
 use Test::More qw( no_plan );
-use I18N::LangTags qw(is_language_tag);
+use I18N::LangTags qw( is_language_tag );
 
 my $Text_In  = 'My hovercraft is full of eels.';
 my $Text_Out = 'Mein Luftkissenfahrzeug ist voller Aale.';
@@ -17,12 +17,12 @@ my @methods = qw(
     agent
     config
 );
+
 use_ok($module);
-can_ok($module, @methods);
-
-
 
 my $xl8r = Lingua::Translate::Google->new(src => "en", dest => "de");
+
+can_ok($xl8r, @methods);
 
 ok(UNIVERSAL::isa($xl8r, "Lingua::Translate::Google"),
    "Lingua::Translate::Google->new()");
@@ -52,7 +52,7 @@ ok(UNIVERSAL::isa($xl8r, "Lingua::Translate::Google"),
 # Override LWP::UserAgent::request 
 # and verify correct output for mocked translation service.
 {
-    no warnings 'once';
+    no warnings qw( once redefine );
 
     # Intercepts the network request and returns a sensible value.
     # Thus, the test assumes that LWP::UserAgent::request and Google
@@ -81,11 +81,8 @@ ok(UNIVERSAL::isa($xl8r, "Lingua::Translate::Google"),
             die "wrong API key sent"
                 if $req->uri() =~ m/key=/ && $req->uri() !~ m/$API_Key/;
 
-            die "wrong URI for requests sent with an API key"
-                if $req->uri() =~ m/key=$API_Key/ && $req->uri() !~ m/googleapis\.com/;
-
-            die "wrong URI for requests sent without an API key"
-                if $req->uri() !~ m/key=$API_Key/ && $req->uri() =~ m/googleapis\.com/;
+            die "wrong URI"
+                if $req->uri() !~ m/googleapis\.com/;
 
             my $res = HTTP::Response->new( 200 );
             $res->content( qq({"responseData": {"translatedText":"$Text_Out"}, "responseDetails": null, "responseStatus": 200}) );

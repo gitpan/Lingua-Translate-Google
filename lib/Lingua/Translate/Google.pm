@@ -9,20 +9,30 @@
 #
 package Lingua::Translate::Google;
 
-our $VERSION = '0.04';
+$VERSION = '0.05';
 
 use strict;
 use Carp;
 use LWP::UserAgent;
-use HTTP::Request::Common qw( GET POST );
-use Unicode::MapUTF8 qw(to_utf8);
-use I18N::LangTags qw(is_language_tag);
+use HTTP::Request::Common qw( GET );
+use Unicode::MapUTF8 qw( to_utf8 );
+use I18N::LangTags qw( is_language_tag );
 
 # package globals:
-# %config is default values to use for new objects
-# %valid_langs is a hash from a google URI to a hash of 'XX_YY'
-# language pair tags to true values.
-use vars qw($VERSION %config %valid_langs);
+use vars qw( $VERSION %config %valid_langs );
+
+my (
+    $DEFAULT_GOOGLE_URI, $DEFAULT_GOOGLE_TRANSLATE_URI,
+    $DEFAULT_AGENT, $DEFAULT_CHUNK_SIZE, $DEFAULT_RETRIES
+);
+{
+    use Readonly;
+    Readonly $DEFAULT_GOOGLE_URI           => 'http://ajax.googleapis.com/ajax/services/language/translate?';
+    Readonly $DEFAULT_GOOGLE_TRANSLATE_URI => 'http://translate.google.com/translate_t#';
+    Readonly $DEFAULT_AGENT                => __PACKAGE__ . "/$VERSION";
+    Readonly $DEFAULT_CHUNK_SIZE           => 1000;
+    Readonly $DEFAULT_RETRIES              => 2;
+}
 
 sub new {
     my ( $class, %options ) = (@_);
@@ -36,13 +46,13 @@ sub new {
       or croak "$self->{src} is not a valid RFC3066 language tag";
 
     $self->available( $self->{src} )
-        or croak "$self->{dest} is not available on Google translate"; 
+        or croak "$self->{dest} is not available on Google translate";
 
     is_language_tag( $self->{dest} = delete $options{dest} )
       or croak "$self->{dest} is not a valid RFC3066 language tag";
 
     $self->available( $self->{dest} )
-        or croak "$self->{dest} is not available on Google translate"; 
+        or croak "$self->{dest} is not available on Google translate";
 
     $self->config(%options);
 
@@ -80,46 +90,25 @@ sub translate {
 
         my $req;
 
-        # Primary service: google_uri
+        my %params = (
+            v        => '1.0',
+            q        => $chunk,
+            langpair => $self->{src} . '%7C' . $self->{dest},
+        );
+
         if ( $self->{api_key} ) {
 
-            my %params = (
-                v        => '1.0',
-                key      => $self->{api_key},
-                q        => $chunk,
-                langpair => $self->{src} . '%7C' . $self->{dest},
-            );
-            my $query = join '&', map { "$_=$params{$_}" } keys %params;
-
-            $req = GET "$self->{google_uri}$query";
-
-            if ( !$self->{referer} ) {
-
-                # Warn because Google surely frowns upon doing this.
-                warn "no valid referer provided, using $self->{google_uri}";
-                $self->{referer} = $self->{google_uri};
-            }
+            $params{key} = $self->{api_key};
         }
 
-        # Fallback service at: google_fallback_uri
-        else {
+        my $query = join '&', map { "$_=$params{$_}" } keys %params;
 
-            my %params = (
-                client => 't',
-                sl     => $self->{src}, 
-                tl     => $self->{dest},
-                text   => $chunk,
-            );
-            my $query = join '&', map { "$_=$params{$_}" } keys %params;
+        $req = GET "$self->{google_uri}$query";
 
-            $req = GET "$self->{google_fallback_uri}$query";
-
-            if ( $self->{referer} && $self->{referer} !~ m/translate[.]google[.]com/msx ) {
-
-                # Warn because Google surely frowns upon doing this.
-                warn "overwriting referer $self->{referer} to $self->{google_fallback_uri}\n";
-                $self->{referer} = $self->{google_fallback_uri};
-            }
+        if ( !$self->{referer} ) {
+            # Warn because Google frowns upon doing this.
+            warn "no valid referer provided, using $self->{google_uri}";
+            $self->{referer} = $self->{google_uri};
         }
 
         $req->header( 'Referer',        $self->{referer} );
@@ -291,7 +280,7 @@ sub _has_language {
         return 1
             if $lang_pair =~ $lang_regex;
     }
-    return 0; 
+    return 0;
 }
 
 # Returns the LWP::UserAgent object.
@@ -314,7 +303,7 @@ sub agent {
     $self->{ua};
 }
 
-# Used to set configuration options.
+# set configuration options
 sub config {
 
     my $self;
@@ -379,47 +368,24 @@ sub config {
     }
 }
 
-# extract configuration options from the POD
-use Pod::Constants
-  'NAME' => sub { ($VERSION) = (m/(\d+\.\d+)/); },
-  'CONFIGURATION FUNCTIONS' => sub {
-    Pod::Constants::add_hook(
-        '*item' => sub {
-            my ($varname) = m/(\w+)/;
-
-            my ($default) = m/The default value is\s+"(.*?)"/s;
-
-            config( $varname => $default );
-        }
-    );
-    Pod::Constants::add_hook(
-        '*back' => sub {
-
-            # an ugly hack?
-            $config{agent} .= $VERSION;
-
-            Pod::Constants::delete_hook('*item');
-            Pod::Constants::delete_hook('*back');
-        }
-    );
-  };
+# set defaults
+config( 'google_uri'           => $DEFAULT_GOOGLE_URI           );
+config( 'google_translate_uri' => $DEFAULT_GOOGLE_TRANSLATE_URI );
+config( 'agent'                => $DEFAULT_AGENT                );
+config( 'chunk_size'           => $DEFAULT_CHUNK_SIZE           );
+config( 'retries'              => $DEFAULT_RETRIES              );
 
 1;
 
-# CAUTION: Some constants have their default values extracted from the
-# POD. See the use Pod::Constants section.
 
 __END__
 
-=head1 NAME
+=head1 Lingua::Translate::Google
 
-Lingua::Translate::Google - Translation back-end for Google's beta translation service.
+Translation back-end for Google's beta translation service.
 
 =head1 SYNOPSIS
 
- # 
- # Translate a string.
- # 
  use Lingua::Translate;
 
  Lingua::Translate::config
@@ -435,9 +401,7 @@ Lingua::Translate::Google - Translation back-end for Google's beta translation s
  print $xl8r->translate('Mein Luftkissenfahrzeug ist voller Aale');
 
 
- # 
- # Perhaps you'd like to build a collection of translations.
- # 
+ # build a collection of translations
  use Lingua::Translate;
  use Data::Dumper;
 
@@ -480,47 +444,47 @@ Lingua::Translate::Google - Translation back-end for Google's beta translation s
 
 =head1 DESCRIPTION
 
-Lingua::Translate::Google is a translation back-end for Lingua::Translate that contacts Google translation service to do the real work.
-The Google translation API is currently at L<http://ajax.googleapis.com/ajax/services/language/translate/.>
+Lingua::Translate::Google is a translation back-end for Lingua::Translate 
+that contacts Google translation service to do the real work.
+The Google translation API is currently at: 
+L<http://code.google.com/apis/ajaxlanguage/documentation/#Translation>
 
-Lingua::Translate::Google is normally invoked by Lingua::Translate; there should be no need to call it directly.  If you do call it directly, you will lose the ability to easily switch your programs over to alternate back-ends that are later produced.
-
-If you omit the API key config option, then this module uses the fallback service at translate.google.com/ which works fine without it, on the condition that the referer is the URL of the translate service. 
-
+Lingua::Translate::Google is normally invoked by Lingua::Translate; there 
+should be no need to call it directly.  If you do call it directly, you will 
+lose the ability to easily switch your programs over to alternate back-ends 
+that are later produced.
 
 =over
 
 =item Please read:
 
-By using Google services (either directly or via this module) you are agreeing by their terms of service.
+By using Google services (either directly or via this module) you are 
+agreeing by their terms of service.
 
 L<http://www.google.com/accounts/TOS>
 
-
 =item To obtain your API key:
 
-To use the Google APIs, Google asks that you obtain an API key, and that you always include a valid and accurate referer URL. If you supply an API key, then this module uses the AJAX API which Google provides specifically for third party application development.
-
+To use the Google APIs, Google asks that you obtain an API key, and that you 
+always include a valid and accurate referer URL.
 
 L<http://code.google.com/apis/ajaxfeeds/signup.html>
 
-
 =back
-
 
 =head1 CONSTRUCTOR
 
-
 =head2 new(src => $lang, dest => lang)
 
-Creates a new translation handle.
-Determines whether the requested language pair is available and will croak if not.
+Creates a new translation handle. Determines whether the requested language 
+pair is available and will croak if not.
 
 =over
 
 =item src
 
-Source language, in RFC-3066 form.  See L<I18N::LangTags> for a discussion of RFC-3066 language tags.
+Source language, in RFC-3066 form. See L<I18N::LangTags> for a discussion of 
+RFC-3066 language tags.
 
 =item dest
 
@@ -528,23 +492,28 @@ Destination Language
 
 =back
 
-Other options that may be passed to the config() function (see below) may also be passed as arguments to this constructor.
-
+Other options that may be passed to the config() function (see below) may 
+also be passed as arguments to this constructor.
 
 =head1 METHODS
 
 The following methods may be called on Lingua::Translate::Google objects.
 
-
 =head2 available() : @list
 
-Returns a list of available language pairs, in the form of 'XX_YY', where XX is the source language and YY is the destination.
-If you want the english name of a language tag, call I18N::LangTags::List::name() on it.  See L<I18N::LangTags::List>.
+Returns a list of available language pairs, in the form of 'XX_YY', where XX 
+is the source language and YY is the destination. If you want the english 
+name of a language tag, call I18N::LangTags::List::name() on it.  
+See L<I18N::LangTags::List>.
 
-This method contacts Google (at the configured google_fallback_uri) and parses from the HTML the available language pairs. The list of language pairs is cached for subsequent calls.
+This method contacts Google (at the configured google_fallback_uri) and 
+parses from the HTML the available language pairs. The list of language 
+pairs is cached for subsequent calls.
 
-As of Lingua::Translate version 0.09, calls to this method don't propogate from the Lingua:Translate namespace.
-Rather, this method is only available in the Lingua::Translate::Google namespace.
+As of Lingua::Translate version 0.09, calls to this method don't propogate 
+from the Lingua:Translate namespace.
+Rather, this method is only available in the Lingua::Translate::Google 
+namespace.
 
 You may also use this method to see if a given language tag is available.
 
@@ -555,135 +524,120 @@ You may also use this method to see if a given language tag is available.
 
 Translates the given text, or die's on any kind of error.
 
-It is assumed that the $text coming in is UTF-8 encoded, and that Google will be returning UTF-8 encoded text. In the case that Google returns some other encoding, then an attempt to convert the result to UTF-8 is made with Unicode::MapUTF8::to_utf8. Observation has indicated that the fallback service (at /translate_a/t) is inclined to return windows-1255 encoded text, despite the value of the 'Accept-Charset' header sent in the request. However, a non-windows user agent string seems to remedy this.
+It is assumed that the $text coming in is UTF-8 encoded, and that Google will
+be returning UTF-8 encoded text. In the case that Google returns some other 
+encoding, then an attempt to convert the result to UTF-8 is made with 
+Unicode::MapUTF8::to_utf8. Observation has indicated that the fallback 
+service (at /translate_a/t) is inclined to return windows-1255 encoded text, 
+despite the value of the 'Accept-Charset' header sent in the request. 
+However, a non-windows user agent string seems to remedy this.
 
-Also, the primary service (at googleapis.com) returns JSON which assumes the client is JavaScript running with an HTML document. This being the case strings are double encoded. First special characters are converted to HTML entities, and then the ampersands are converted to unicode escape sequences. For example, the string "Harold's" is encoded as "Harold\u0027#39;s". The translate function attempts to return plain old UTF-8 encoded strings without any entities or escape sequences.
-
+Google returns JSON which assumes the client is JavaScript running with an 
+HTML document. This being the case strings are double encoded. First special 
+characters are converted to HTML entities, and then the ampersands are 
+converted to unicode escape sequences. For example, the string "Harold's" is 
+encoded as "Harold\u0027#39;s". The translate function attempts to return 
+plain old UTF-8 encoded strings without any entities or escape sequences.
 
 =head2 agent() : LWP::UserAgent
 
 Returns the LWP::UserAgent object used to contact Google.
 
-
 =head1 CONFIGURATION FUNCTIONS
-
 
 =head2 config( option => $value, )
 
-This function sets defaults for use when constructing objects. Options include:
+This function sets defaults for use when constructing objects. 
+Options include:
 
 =over
 
 =item api_key
 
-This key is issued to you by Google and it gives you access to the AJAX API which is the translation service intended for application development.
+The API key is not required. But you're invited to use one as a secondary 
+means of identifying yourself.
 
 See: L<http://code.google.com/apis/ajaxfeeds/signup.html>
 
 =item referer
 
-The value for the referer header in HTTP requests sent to the Google translation service.
+The value for the referer header in HTTP requests sent to the Google 
+translation service.
 
-Google requests that you provide a valid referer string. You will probably use the one you specified when you got your API key. If you're not specifying an API key, then the fall-back translator will reject (with a "403 Forbidden" response) any request which does not have the translator URL as its referer. 
-
-The translate function will make sure you have a referer value that works, and will warn if it's overwriting the value you specified. 
+Google requests that you provide a valid referer string as the primary means
+of identifying yourself. You will probably use the URL you specified when 
+you got your API key, or perhaps the URL where your application exists.
 
 =item google_uri
 
 The uri to use when contacting Google.
 
-The default value is
-
-"http://ajax.googleapis.com/ajax/services/language/translate?"
-
-  v=1.0
- &q=hello%20world
- &langpair=en%7Cit
- &key=yourapikey
+The default value is:
+http://ajax.googleapis.com/ajax/services/language/translate?
 
 For details see:
 http://code.google.com/apis/ajaxlanguage/documentation/#fonje
 
-Another (yet currently unsported) possibility is:
-
-"http://www.google.com/uds/Gtranslate?"
-
-  v=1.0
- &q=hello%20world
- &langpair=en%7Czh-TW
- &callback=google.language.callbacks.id101
- &context=22
- &key=notsupplied
- &key=yourapikey
-
-=item google_fallback_uri
-
-The URI used when contacting Google and no api_key is provided. This is the AJAX service used by the public translate site. 
-
-The default value is
-
-"http://translate.google.com/translate_a/t?"
-
-  client=t
- &text=hello%20world
- &sl=en
- &tl=zh-Tw
-
-Note, Google states clearly that they want you to obtain and use an API key, and also include a valid and accurate referer URL.
-
 =item google_translate_uri
 
-This is the URL of the Google page where the available languages are parsed from. The L<item available()_:_@list> method uses this URI to get some HTML which is presumed to have a select list for the source and destination languages.
+This is the URL of the Google page where the available languages are parsed 
+from. The L<item available()_:_@list> method uses this URI to get some HTML 
+which is presumed to have a select list for the source and destination 
+languages.
 
-The default value is
-
-"http://translate.google.com/translate_t#"
+The default value is:
+http://translate.google.com/translate_t#
 
 =item agent
 
 The User-Agent string to use when contacting Google.
 
-The default value is "Lingua::Translate::Google/", plus the version number of the package.
+The default value is:
+Lingua::Translate::Google/0.05
 
 =item chunk_size
 
-The size to break chunks into before handing them off to Google. The default value is "1000" (bytes).
+The size to break chunks into before handing them off to Google. 
+The default value is 1000 bytes.
 
 =item retries
 
-The number of times to retry contacting Google if the first attempt fails. The default value is "2".
+The number of times to retry contacting Google if the first attempt fails. 
+The default value is 2.
 
 =back
 
 =head1 DIAGNOSTICS
 
-Expect to see a warning if you're using the api_key and omitting the referer. Also, expect to see a warning if you're omitting the api_key and specifying a custom referer. This is because the Google translation service cares about your referer values. This module will warn whenever it's changing what you specified to make the translation work.
-
+Expect to see a warning if you omit the referer. This is because the Google 
+translation service cares about your referer value.
 
 =head1 TODO
 
-The chunk_size attribute is a hold-over from the Babelfish algorithm. It is TBD as to what chunk size ought to be set for Google.
+The chunk_size attribute is a hold-over from the Babelfish algorithm. 
+It is TBD as to what chunk size ought to be set for Google.
 
 There might be a better way to get the available language pairs.
 
-
 =head1 SEE ALSO
 
-L<Lingua::Translate>, L<Lingua::Translate::Babelfish>, L<LWP::UserAgent>, L<Unicode::MapUTF8>
-
+L<Lingua::Translate>, L<Lingua::Translate::Babelfish>, 
+L<LWP::UserAgent>, L<Unicode::MapUTF8>
 
 =head1 LICENSE
 
-This is free software, and can be used/modified under the same terms as Perl itself.
+This is free software, and can be used/modified under the same terms as 
+Perl itself.
 
 =head1 ACKNOWLEDGEMENTS
 
-Sam Vilain (L<http://search.cpan.org/~samv/>) wrote Lingua::Translate::Babelfish which served as the basis for this module.
+Sam Vilain (L<http://search.cpan.org/~samv/>) wrote 
+Lingua::Translate::Babelfish which served as the basis for this module.
 
 Jerrad Pierce (L<http://search.cpan.org/~jpierce/>) for bug reporting.
 
 =head1 AUTHOR
 
-Dylan Doxey, <dylan@cpan.org>
+Dylan Doxey, <dylan.doxey@gmail.com>
 
 =cut
