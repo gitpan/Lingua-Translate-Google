@@ -1,5 +1,10 @@
 Revision history for Perl extension Lingua::Translate::Google.
 
+0.06  Sun July 19 19:47:28 2009
+    - Fix bug 46057: no accepts src language tag 'auto'
+    - src option for constructor is optional
+    - config function recognizes src and dest options
+
 0.05  Fri Mar 06 23:37:00 2009
     - Dropped use of Pod::Constants in favor of Readonly due 
       to taint errors when perl with -T. 

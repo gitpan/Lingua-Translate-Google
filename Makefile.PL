@@ -3,7 +3,7 @@ use ExtUtils::MakeMaker;
 WriteMakefile
     (
 ABSTRACT => 'Lingua::Translate::Google - a Google backend for Lingua::Translate',
-AUTHOR => 'Dylan Doxey, <dylan@cpan.org>',
+AUTHOR => 'Dylan Doxey, <dylan.doxey@gmail.com>',
 NAME => "Lingua::Translate::Google",
 PREREQ_PM =>
   { HTML::TokeParser => 2.19,

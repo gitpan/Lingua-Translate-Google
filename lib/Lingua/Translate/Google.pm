@@ -9,7 +9,7 @@
 #
 package Lingua::Translate::Google;
 
-$VERSION = '0.05';
+$VERSION = '0.06';
 
 use strict;
 use Carp;
@@ -22,16 +22,19 @@ use I18N::LangTags qw( is_language_tag );
 use vars qw( $VERSION %config %valid_langs );
 
 my (
-    $DEFAULT_GOOGLE_URI, $DEFAULT_GOOGLE_TRANSLATE_URI,
+    $URI, $LANG_DETECT_URL, $TRANSLATE_URI, $DEFAULT_KEY,
     $DEFAULT_AGENT, $DEFAULT_CHUNK_SIZE, $DEFAULT_RETRIES
 );
 {
     use Readonly;
-    Readonly $DEFAULT_GOOGLE_URI           => 'http://ajax.googleapis.com/ajax/services/language/translate?';
-    Readonly $DEFAULT_GOOGLE_TRANSLATE_URI => 'http://translate.google.com/translate_t#';
-    Readonly $DEFAULT_AGENT                => __PACKAGE__ . "/$VERSION";
-    Readonly $DEFAULT_CHUNK_SIZE           => 1000;
-    Readonly $DEFAULT_RETRIES              => 2;
+
+    Readonly $DEFAULT_KEY        => 'notsupplied';
+    Readonly $URI                => 'http://ajax.googleapis.com/ajax/services/language/translate?';
+    Readonly $TRANSLATE_URI      => 'http://translate.google.com/translate_t#';
+    Readonly $LANG_DETECT_URL    => 'http://www.google.com/uds/GlangDetect?';
+    Readonly $DEFAULT_AGENT      => __PACKAGE__ . "/$VERSION";
+    Readonly $DEFAULT_CHUNK_SIZE => 1000;
+    Readonly $DEFAULT_RETRIES    => 2;
 }
 
 sub new {
@@ -39,17 +42,23 @@ sub new {
 
     my $self = bless {%config}, $class;
 
-    croak 'Must supply source and destination language'
-      unless ( defined $options{src} and defined $options{dest} );
+    croak 'Must supply destination language'
+        unless defined $options{dest};
 
-    is_language_tag( $self->{src} = delete $options{src} )
-      or croak "$self->{src} is not a valid RFC3066 language tag";
+    $self->{src}  = exists $options{src} ? delete $options{src} : 'auto';
+    $self->{dest} = delete $options{dest};
 
-    $self->available( $self->{src} )
-        or croak "$self->{dest} is not available on Google translate";
+    if ( $self->{src} ne 'auto' ) {
 
-    is_language_tag( $self->{dest} = delete $options{dest} )
-      or croak "$self->{dest} is not a valid RFC3066 language tag";
+        is_language_tag( $self->{src} )
+            or croak "$self->{src} is not a valid RFC3066 language tag";
+
+        $self->available( $self->{src} )
+            or croak "$self->{src} is not available on Google translate";
+    }
+
+    is_language_tag( $self->{dest} )
+        or croak "$self->{dest} is not a valid RFC3066 language tag";
 
     $self->available( $self->{dest} )
         or croak "$self->{dest} is not available on Google translate";
@@ -61,6 +70,7 @@ sub new {
 
 sub translate {
     my $self = shift;
+
     UNIVERSAL::isa( $self, __PACKAGE__ )
       or croak __PACKAGE__ . '::translate() called as function';
 
@@ -82,7 +92,33 @@ sub translate {
     die 'Could not break up given text into chunks'
         if ( pos($text) and pos($text) < length($text) );
 
-    # the translated text
+    if ( $self->{src} eq 'auto' ) {
+
+        my %params = (
+            context  => 22,
+            v        => '1.0',
+            key      => $self->{api_key},
+            callback => 'google.language.callbacks.id100',
+            q        => $chunks[0],
+        );
+        my $query = join '&', map { "$_=$params{$_}" } keys %params;
+
+        my $req = GET "$LANG_DETECT_URL$query";
+
+        my $res = $self->agent->request($req);
+
+        my $json = $res->content() || "";
+
+        if ( $json =~ m/ "language" : "( \w+ )" /xms ) {
+
+            $self->{src} = $1;
+        }
+        else {
+            warn "sorry, couldn't auto detect language\n";
+            return;
+        }
+    }
+
     my ( @translated, $error );
 
     CHUNK:
@@ -105,11 +141,7 @@ sub translate {
 
         $req = GET "$self->{google_uri}$query";
 
-        if ( !$self->{referer} ) {
-            # Warn because Google frowns upon doing this.
-            warn "no valid referer provided, using $self->{google_uri}";
-            $self->{referer} = $self->{google_uri};
-        }
+        $self->{referer} ||= $URI;
 
         $req->header( 'Referer',        $self->{referer} );
         $req->header( 'Accept-Charset', 'UTF-8' );
@@ -242,7 +274,11 @@ sub available {
             my $dest = $1;
 
             # Presumably any source language is paired with any to language.
+            LANG:
             for my $src (@source_langs) {
+
+                next LANG
+                    if $src eq 'auto';
 
                 my $pair = "$src\_$dest";
 
@@ -323,10 +359,6 @@ sub config {
               or croak "Google URI '$value' not a query URI";
 
         }
-        elsif ( $option eq 'google_fallback_uri' ) {
-
-            $self->{google_fallback_uri} = $value;
-        }
         elsif ( $option eq 'google_translate_uri' ) {
 
             $self->{google_translate_uri} = $value;
@@ -361,6 +393,14 @@ sub config {
 
             $self->{retries} = $value;
         }
+        elsif ( $option eq 'src' ) {
+
+            $self->{src} = $value;
+        }
+        elsif ( $option eq 'dest' ) {
+
+            $self->{dest} = $value;
+        }
         else {
 
             croak "Unknown configuration option $option";
@@ -369,11 +409,12 @@ sub config {
 }
 
 # set defaults
-config( 'google_uri'           => $DEFAULT_GOOGLE_URI           );
-config( 'google_translate_uri' => $DEFAULT_GOOGLE_TRANSLATE_URI );
-config( 'agent'                => $DEFAULT_AGENT                );
-config( 'chunk_size'           => $DEFAULT_CHUNK_SIZE           );
-config( 'retries'              => $DEFAULT_RETRIES              );
+config( 'api_key'              => $DEFAULT_KEY        );
+config( 'google_uri'           => $URI                );
+config( 'google_translate_uri' => $TRANSLATE_URI      );
+config( 'agent'                => $DEFAULT_AGENT      );
+config( 'chunk_size'           => $DEFAULT_CHUNK_SIZE );
+config( 'retries'              => $DEFAULT_RETRIES    );
 
 1;
 
@@ -395,78 +436,46 @@ Translation back-end for Google's beta translation service.
          referer  => 'http://your.domain.tld/yourdir/',
      );
 
- my $xl8r = Lingua::Translate->new(src => 'de', dest => 'en');
+ my $xl8r = Lingua::Translate->new( src => 'de', dest => 'en' );
 
  # prints 'My hovercraft is full of eels'
  print $xl8r->translate('Mein Luftkissenfahrzeug ist voller Aale');
 
+ # switch to auto detect for source language
+ $xl8r->config( src => 'auto' );
 
- # build a collection of translations
- use Lingua::Translate;
- use Data::Dumper;
-
- my $src = 'en';
-
- my %source_lang = (
-     hovercraft_eels    => 'My hovercraft is full of eels.',
-     cigarettes_matches => 'I would like some cigarettes and a box of matches.',
-     hello_world        => 'Hello world.'
- );
-
- my %result_lang;
-
- Lingua::Translate::config
-     (
-         back_end => 'Google',
-         api_key  => 'YoUrApIkEy',
-         referer  => 'http://your.domain.tld/yourdir/',
-     );
-
- DEST:
- for my $dest (qw( iw pt ro fr de hi es ja zh-CN )) {
-
-     my $xl8r = Lingua::Translate->new(
-         src      => $src,
-         dest     => $dest,
-     ) or die "No translation server available for $src -> $dest";
-
-     TOKEN:
-     for my $token ( keys %source_lang ) {
-
-         my $source_text = $source_lang{$token};
-
-         $result_lang{$dest}->{$token} = $xl8r->translate($source_text);
-     }
- }
-
- print Dumper( \%result_lang ) . "\n";
-
+ # prints 'My hovercraft is full of eels'
+ $xl8r->translate('Mi aerodeslizador está lleno de anguilas');
 
 =head1 DESCRIPTION
 
-Lingua::Translate::Google is a translation back-end for Lingua::Translate 
+Lingua::Translate::Google is a translation back-end for Lingua::Translate
 that contacts Google translation service to do the real work.
-The Google translation API is currently at: 
+The Google translation API is currently at:
 L<http://code.google.com/apis/ajaxlanguage/documentation/#Translation>
 
-Lingua::Translate::Google is normally invoked by Lingua::Translate; there 
-should be no need to call it directly.  If you do call it directly, you will 
-lose the ability to easily switch your programs over to alternate back-ends 
+Lingua::Translate::Google is normally invoked by Lingua::Translate; there
+should be no need to call it directly.  If you do call it directly, you will
+lose the ability to easily switch your programs over to alternate back-ends
 that are later produced.
 
 =over
 
 =item Please read:
 
-By using Google services (either directly or via this module) you are 
+By using Google services (either directly or via this module) you are
 agreeing by their terms of service.
 
 L<http://www.google.com/accounts/TOS>
 
-=item To obtain your API key:
+=item Referer URL
 
-To use the Google APIs, Google asks that you obtain an API key, and that you 
-always include a valid and accurate referer URL.
+Google asks that you include a meaningful referer value to identify the
+API users.
+
+=item API key
+
+The API key is optional.
 
 L<http://code.google.com/apis/ajaxfeeds/signup.html>
 
@@ -474,17 +483,19 @@ L<http://code.google.com/apis/ajaxfeeds/signup.html>
 
 =head1 CONSTRUCTOR
 
-=head2 new(src => $lang, dest => lang)
+=head2 new( src => $lang, dest => $lang )
 
-Creates a new translation handle. Determines whether the requested language 
+Creates a new translation handle. Determines whether the requested language
 pair is available and will croak if not.
 
 =over
 
 =item src
 
-Source language, in RFC-3066 form. See L<I18N::LangTags> for a discussion of 
+Source language, in RFC-3066 form. See L<I18N::LangTags> for a discussion of
 RFC-3066 language tags.
+
+As of version 0.06 this option can be omitted or given a value 'auto'.
 
 =item dest
 
@@ -492,7 +503,7 @@ Destination Language
 
 =back
 
-Other options that may be passed to the config() function (see below) may 
+Other options that may be passed to the config() function (see below) may
 also be passed as arguments to this constructor.
 
 =head1 METHODS
@@ -501,19 +512,14 @@ The following methods may be called on Lingua::Translate::Google objects.
 
 =head2 available() : @list
 
-Returns a list of available language pairs, in the form of 'XX_YY', where XX 
-is the source language and YY is the destination. If you want the english 
-name of a language tag, call I18N::LangTags::List::name() on it.  
+Returns a list of available language pairs, in the form of 'XX_YY', where XX
+is the source language and YY is the destination. If you want the english
+name of a language tag, call I18N::LangTags::List::name() on it.
 See L<I18N::LangTags::List>.
 
-This method contacts Google (at the configured google_fallback_uri) and 
-parses from the HTML the available language pairs. The list of language 
+This method contacts Google (at http://translate.google.com/translate_t) and
+parses from the HTML the available language pairs. The list of language
 pairs is cached for subsequent calls.
-
-As of Lingua::Translate version 0.09, calls to this method don't propogate 
-from the Lingua:Translate namespace.
-Rather, this method is only available in the Lingua::Translate::Google 
-namespace.
 
 You may also use this method to see if a given language tag is available.
 
@@ -525,18 +531,18 @@ You may also use this method to see if a given language tag is available.
 Translates the given text, or die's on any kind of error.
 
 It is assumed that the $text coming in is UTF-8 encoded, and that Google will
-be returning UTF-8 encoded text. In the case that Google returns some other 
-encoding, then an attempt to convert the result to UTF-8 is made with 
-Unicode::MapUTF8::to_utf8. Observation has indicated that the fallback 
-service (at /translate_a/t) is inclined to return windows-1255 encoded text, 
-despite the value of the 'Accept-Charset' header sent in the request. 
+be returning UTF-8 encoded text. In the case that Google returns some other
+encoding, then an attempt to convert the result to UTF-8 is made with
+Unicode::MapUTF8::to_utf8. Observation has indicated that the fallback
+service (at /translate_a/t) is inclined to return windows-1255 encoded text,
+despite the value of the 'Accept-Charset' header sent in the request.
 However, a non-windows user agent string seems to remedy this.
 
-Google returns JSON which assumes the client is JavaScript running with an 
-HTML document. This being the case strings are double encoded. First special 
-characters are converted to HTML entities, and then the ampersands are 
-converted to unicode escape sequences. For example, the string "Harold's" is 
-encoded as "Harold\u0027#39;s". The translate function attempts to return 
+Google returns JSON which assumes the client is JavaScript running with an
+HTML document. This being the case strings are double encoded. First special
+characters are converted to HTML entities, and then the ampersands are
+converted to unicode escape sequences. For example, the string "Harold's" is
+encoded as "Harold\u0027#39;s". The translate function attempts to return
 plain old UTF-8 encoded strings without any entities or escape sequences.
 
 =head2 agent() : LWP::UserAgent
@@ -547,25 +553,24 @@ Returns the LWP::UserAgent object used to contact Google.
 
 =head2 config( option => $value, )
 
-This function sets defaults for use when constructing objects. 
-Options include:
+Use this to set any of these options:
 
 =over
 
 =item api_key
 
-The API key is not required. But you're invited to use one as a secondary 
+The API key is not required. But you're invited to use one as a secondary
 means of identifying yourself.
 
 See: L<http://code.google.com/apis/ajaxfeeds/signup.html>
 
 =item referer
 
-The value for the referer header in HTTP requests sent to the Google 
+The value for the referer header in HTTP requests sent to the Google
 translation service.
 
 Google requests that you provide a valid referer string as the primary means
-of identifying yourself. You will probably use the URL you specified when 
+of identifying yourself. You will probably use the URL you specified when
 you got your API key, or perhaps the URL where your application exists.
 
 =item google_uri
@@ -578,60 +583,53 @@ http://ajax.googleapis.com/ajax/services/language/translate?
 For details see:
 http://code.google.com/apis/ajaxlanguage/documentation/#fonje
 
-=item google_translate_uri
-
-This is the URL of the Google page where the available languages are parsed 
-from. The L<item available()_:_@list> method uses this URI to get some HTML 
-which is presumed to have a select list for the source and destination 
-languages.
-
-The default value is:
-http://translate.google.com/translate_t#
-
 =item agent
 
 The User-Agent string to use when contacting Google.
 
 The default value is:
-Lingua::Translate::Google/0.05
+Lingua::Translate::Google/0.06
 
 =item chunk_size
 
-The size to break chunks into before handing them off to Google. 
+The size to break chunks into before handing them off to Google.
 The default value is 1000 bytes.
 
 =item retries
 
-The number of times to retry contacting Google if the first attempt fails. 
+The number of times to retry contacting Google if the first attempt fails.
 The default value is 2.
+
+=item src
+
+The source language. Same as constructor src option.
+
+=item dest
+
+The destination language. Same as constructor dest option.
 
 =back
 
-=head1 DIAGNOSTICS
-
-Expect to see a warning if you omit the referer. This is because the Google 
-translation service cares about your referer value.
-
 =head1 TODO
 
-The chunk_size attribute is a hold-over from the Babelfish algorithm. 
+The chunk_size attribute is a hold-over from the Babelfish algorithm.
 It is TBD as to what chunk size ought to be set for Google.
 
 There might be a better way to get the available language pairs.
 
 =head1 SEE ALSO
 
-L<Lingua::Translate>, L<Lingua::Translate::Babelfish>, 
+L<Lingua::Translate>, L<Lingua::Translate::Babelfish>,
 L<LWP::UserAgent>, L<Unicode::MapUTF8>
 
 =head1 LICENSE
 
-This is free software, and can be used/modified under the same terms as 
+This is free software, and can be used/modified under the same terms as
 Perl itself.
 
 =head1 ACKNOWLEDGEMENTS
 
-Sam Vilain (L<http://search.cpan.org/~samv/>) wrote 
+Sam Vilain (L<http://search.cpan.org/~samv/>) wrote
 Lingua::Translate::Babelfish which served as the basis for this module.
 
 Jerrad Pierce (L<http://search.cpan.org/~jpierce/>) for bug reporting.

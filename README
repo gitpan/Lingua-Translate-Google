@@ -1,5 +1,5 @@
-Lingua::Translate version 0.08
-==============================
+Lingua::Translate::Google version 0.06
+======================================
 
 This module performs natural language translation using Google 
 translation web services.
@@ -22,7 +22,6 @@ DEPENDENCIES
 This module requires these other modules and libraries:
 
 Core Functionality:
-   Pod::Constants, 0.15 or later.
    Unicode::MapUTF8
 
 Lingua::Translate::Google backend:
