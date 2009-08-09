@@ -9,7 +9,7 @@
 #
 package Lingua::Translate::Google;
 
-$VERSION = '0.06';
+$VERSION = '0.07';
 
 use strict;
 use Carp;
@@ -421,9 +421,9 @@ config( 'retries'              => $DEFAULT_RETRIES    );
 
 __END__
 
-=head1 Lingua::Translate::Google
+=head1 NAME
 
-Translation back-end for Google's beta translation service.
+Lingua::Translate::Google - Translation back-end for Google's beta translation service.
 
 =head1 SYNOPSIS
 
@@ -588,7 +588,7 @@ http://code.google.com/apis/ajaxlanguage/documentation/#fonje
 The User-Agent string to use when contacting Google.
 
 The default value is:
-Lingua::Translate::Google/0.06
+Lingua::Translate::Google/0.07
 
 =item chunk_size
 

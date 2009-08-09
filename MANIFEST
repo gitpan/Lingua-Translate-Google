@@ -4,4 +4,3 @@ MANIFEST
 README
 lib/Lingua/Translate/Google.pm
 t/01-google.t
-META.yml                                 Module meta-data (added by MakeMaker)
