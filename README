@@ -1,4 +1,4 @@
-Lingua::Translate::Google version 0.07
+Lingua::Translate::Google version 0.08
 ======================================
 
 This module performs natural language translation using Google 
@@ -12,20 +12,23 @@ INSTALLATION
 
 To install this module, type the following:
 
-   perl Makefile.PL
-   make
-   make test
-   make install
+    perl Makefile.PL
+    make
+    make test
+    make install
 
 DEPENDENCIES
 
 This module requires these other modules and libraries:
 
-Core Functionality:
-   Unicode::MapUTF8
-
-Lingua::Translate::Google backend:
-   LWP::UserAgent
+    Carp
+    HTTP::Request::Common
+    I18N::LangTags
+    Lingua::Translate
+    LWP::UserAgent
+    Readonly
+    Test::More
+    Unicode::MapUTF8
 
 ACKNOWLEDGEMENTS
    This module is based on Lingua::Translate::Babelfish by Sam Vilain <enki@snowcra.sh>.

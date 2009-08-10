@@ -9,14 +9,17 @@
 #
 package Lingua::Translate::Google;
 
-$VERSION = '0.07';
+$VERSION = '0.08';
 
 use strict;
-use Carp;
-use LWP::UserAgent;
-use HTTP::Request::Common qw( GET );
-use Unicode::MapUTF8 qw( to_utf8 );
-use I18N::LangTags qw( is_language_tag );
+use warnings;
+{
+    use Carp;
+    use LWP::UserAgent;
+    use HTTP::Request::Common qw( GET );
+    use Unicode::MapUTF8 qw( to_utf8 );
+    use I18N::LangTags qw( is_language_tag );
+}
 
 # package globals:
 use vars qw( $VERSION %config %valid_langs );
