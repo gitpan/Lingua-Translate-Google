@@ -1,4 +1,4 @@
-Lingua::Translate::Google version 0.08
+Lingua::Translate::Google version 0.09
 ======================================
 
 This module performs natural language translation using Google 
@@ -29,6 +29,7 @@ This module requires these other modules and libraries:
     Readonly
     Test::More
     Unicode::MapUTF8
+    URI::Escape
 
 ACKNOWLEDGEMENTS
    This module is based on Lingua::Translate::Babelfish by Sam Vilain <enki@snowcra.sh>.

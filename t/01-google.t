@@ -1,6 +1,7 @@
 #!/usr/bin/perl
 
 use strict;
+use warnings;
 
 use Test::More qw( no_plan );
 use I18N::LangTags qw( is_language_tag );
@@ -20,58 +21,16 @@ my @methods = qw(
 
 use_ok($module);
 
-my $xl8r = Lingua::Translate::Google->new( src => 'en', dest => 'de' );
+my $xl8r = Lingua::Translate::Google->new(
+    src              => 'en',
+    dest             => 'de',
+    save_auto_lookup => 0,
+);
 
 can_ok( $xl8r, @methods );
 
 ok(UNIVERSAL::isa($xl8r, 'Lingua::Translate::Google'),
    'Lingua::Translate::Google->new()');
-
-# Validate the list of available languages
-{
-    my @available_langpairs = $xl8r->available();
-
-    isa_ok( \@available_langpairs, 'ARRAY', 'available returns an array' );
-
-    ok( @available_langpairs > 0, 'available returns results' );
-
-    my %lang_tags;
-    for my $langpair ( @available_langpairs ) {
-
-        my ($sl,$tl) = split /_/, $langpair;
-
-        $lang_tags{$sl} = 1;
-        $lang_tags{$tl} = 1;
-    }
-    for my $lang_tag (keys %lang_tags) {
-
-        ok( is_language_tag($lang_tag), "$lang_tag is a valid I18N language tag" );
-    }
-}
-
-# live translation (may fail if network access is unavailable)
-{
-    $xl8r->config( dest => 'es' );
-
-    my $result = $xl8r->translate('hello world');
-
-    is( $result, 'hola mundo', 'live translation works' );
-
-    $xl8r->config( dest => 'en', src => 'auto' );
-
-    $result = $xl8r->translate('Mi aerodeslizador está lleno de anguilas');
-
-    is( $result, 'My hovercraft is full of eels', 'change to auto detect src' );
-}
-
-# live translation with auto src
-{
-    $xl8r->config( dest => 'en', src => 'auto' );
-
-    my $hello_world = $xl8r->translate('hola mundo');
-
-    is( $hello_world, 'hello world', 'auto src live translation works' );
-}
 
 # Override LWP::UserAgent::request
 # and verify correct output for mocked translation service.
@@ -99,18 +58,39 @@ ok(UNIVERSAL::isa($xl8r, 'Lingua::Translate::Google'),
             # Check for various bad ways to invoke the Google service
             # and die to simulate Google barfing on the request.
 
-            die 'unexpected value sent to google'
-                if $req->uri() !~ m/$query_regex/;
-
             die 'wrong API key sent: ' . $req->uri()
                 if $req->uri() =~ m/key=/ && $req->uri() !~ m/$API_Key/;
 
-            die 'wrong URI'
-                if $req->uri() !~ m/googleapis\.com/;
-
             my $res = HTTP::Response->new( 200 );
-            $res->content( qq({"responseData": {"translatedText":"$Text_Out"}, "responseDetails": null, "responseStatus": 200}) );
+
+            if ( $req->uri() =~ m/GlangDetect/xms ) {
+                $res->content( qq({"responseData": {"language":"es"}, "responseStatus": 200}) );
+            }
+            elsif ( $req->uri() =~ m/translate_t[#]/xms ) {
+
+                my $html = qq{
+                    <select name=sl>
+                        <option value="en">
+                        <option value="es">
+                        <option value="ja">
+                        <option value="de">
+                    </select>
+                    <select name=tl>
+                        <option value="en">
+                        <option value="es">
+                        <option value="ja">
+                        <option value="de">
+                    </select>
+                };
+
+                $res->content($html);
+            }
+            else {
+                $res->content( qq({"responseData": {"translatedText":"$Text_Out"}, "responseDetails": null, "responseStatus": 200}) );
+            }
+
             $res->header( 'Content-Type' => 'text/json;charset=UTF-8' );
+
             return $res;
         }
     };
@@ -144,9 +124,9 @@ ok(UNIVERSAL::isa($xl8r, 'Lingua::Translate::Google'),
             google_uri => 'http://badbadbad/translate?'
         );
         $xl8r->translate('Something');
-        fail("Translation with bad URI didn't die");
+        fail("didn't croak on bogus option");
     };
-    like($@, qr/Bad hostname|Request timed out/, 'dies with bad URI');
+    like($@, qr/not a recognized option/, 'croaks on bogus option');
 }
 
 1;

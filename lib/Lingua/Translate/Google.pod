@@ -1,0 +1,230 @@
+use utf8;
+
+=encoding utf-8
+
+=head1 NAME
+
+Lingua::Translate::Google - Translation back-end for Google's translation service.
+
+=head1 SYNOPSIS
+
+ use Lingua::Translate;
+
+ Lingua::Translate::config
+     (
+         back_end => 'Google',
+         api_key  => 'YoUrApIkEy',
+         referer  => 'http://your.domain.tld/yourdir/',
+     );
+
+ my $xl8r = Lingua::Translate->new( src => 'de', dest => 'en' );
+
+ # prints 'My hovercraft is full of eels'
+ print $xl8r->translate('Mein Luftkissenfahrzeug ist voller Aale') . "\n";
+
+ # switch to auto detect for source language
+ $xl8r->config( src => 'auto' );
+
+ # prints 'My hovercraft is full of eels'
+ print $xl8r->translate('Mi aerodeslizador está lleno de anguilas') . "\n";
+
+=head1 DESCRIPTION
+
+Lingua::Translate::Google is a translation back-end for Lingua::Translate
+that contacts Google translation service to do the real work.
+The Google translation API is currently at:
+L<http://code.google.com/apis/ajaxlanguage/documentation/#Translation>
+
+Lingua::Translate::Google is normally invoked by Lingua::Translate; there
+should be no need to call it directly.  If you do call it directly, you will
+lose the ability to easily switch your programs over to alternate back-ends
+that are later produced.
+
+=over
+
+=item Please Read
+
+By using Google services (either directly or via this module) you are
+agreeing to the Google terms of service.
+
+L<http://www.google.com/accounts/TOS>
+
+=item Referer URL
+
+Google asks that you include a meaningful referer value to identify the
+API users.
+
+=item API key
+
+The API key is optional.
+
+L<http://code.google.com/apis/ajaxfeeds/signup.html>
+
+=back
+
+=head1 CONSTRUCTOR
+
+=head2 new( src => $lang, dest => $lang )
+
+Creates a new translation handle. Determines whether the requested language
+pair is available and will croak if not.
+
+=over
+
+=item src
+
+A valid RFC-3066 language tag or 'auto'.
+See: L<I18N::LangTags>
+Also see: L<LIMITATIONS>
+
+=item dest
+
+Destination Language
+
+=back
+
+Other options that may be passed to the config() function (see below) may
+also be passed as arguments to this constructor.
+
+=head1 METHODS
+
+The following methods may be called on Lingua::Translate::Google objects.
+
+=head2 available() : @list
+
+Returns a list of available language pairs, in the form of 'XX_YY', where XX
+is the source language and YY is the destination. If you want the english
+name of a language tag, call I18N::LangTags::List::name() on it.
+See L<I18N::LangTags::List>.
+
+This method contacts Google (at http://translate.google.com/translate_t) and
+parses from the HTML the available language pairs. The list of language
+pairs is cached for subsequent calls.
+
+You may also use this method to see if a given language tag is available.
+
+ die "doesn't have 'he'"
+     if !$xl8tr->available('he');
+
+=head2 translate($text) : $translated
+
+Translates the given text, or die's on any kind of error.
+
+Incomming $text should be UTF-8 encoded.
+
+=head2 agent() : LWP::UserAgent
+
+Returns the LWP::UserAgent object used to contact Google.
+
+=head1 CONFIG OPTIONS
+
+=head2 config( option => $value, )
+
+Use this to set any of these options:
+
+=over
+
+=item api_key
+
+The API key is not required. But you're invited to use one as a secondary
+means of identifying yourself.
+
+See: L<http://code.google.com/apis/ajaxfeeds/signup.html>
+
+=item referer
+
+The value for the referer header in HTTP requests sent to the Google
+translation service.
+
+Google requests that you provide a valid referer string as the primary means
+of identifying yourself. You will probably use the URL you specified when
+you got your API key, or perhaps the URL where your application exists.
+
+=item agent
+
+The User-Agent string to use when contacting Google.
+
+The default value is:
+Lingua::Translate::Google/0.09
+
+=item retries
+
+The number of times to retry contacting Google if the first attempt fails.
+The default value is 2.
+
+=item src
+
+The source language. Same as constructor src option.
+
+=item dest
+
+The destination language. Same as constructor dest option.
+
+=item save_auto_lookup
+
+Default value is true. When using the 'auto' src option, this causes the result of the first
+language detect query to be saved and used on subsequent calls to translate. Set this option 
+to false to require that each call to translate redetect the source language. 
+
+=back
+
+=head1 LIMITATIONS
+
+This module supports 'auto' src tag for auto detecting the source language. However,
+the calling module Lingua::Translate enforces that language tags are valid according to
+I18N::LangTags::is_language_tag. To prevent this from being a problem, you need to allow 
+Lingua::Translate::Google to be evaluated before the constructor call.
+
+For example:
+
+ use Lingua::Translate;
+
+ Lingua::Translate::config(
+     back_end => 'Google',
+ );
+
+ my $xl8r = Lingua::Translate->new(
+     src      => 'auto',
+     dest     => 'de',
+ );
+
+Or:
+
+ use Lingua::Translate::Google;
+
+ my $xl8r = Lingua::Translate->new(
+     back_end => 'Google',
+     src      => 'auto',
+     dest     => 'de',
+ );
+
+This will fail:
+
+ use Lingua::Translate;
+
+ my $dies = Lingua::Translate->new(
+     back_end => 'Google',
+     src      => 'auto',
+     dest     => 'de',
+ );
+
+=head1 SEE ALSO
+
+L<Lingua::Translate>, L<Lingua::Translate::Babelfish>,
+L<LWP::UserAgent>, L<Unicode::MapUTF8>
+
+=head1 LICENSE
+
+This is free software, and can be used/modified under the same terms as
+Perl itself.
+
+=head1 ACKNOWLEDGEMENTS
+
+Sam Vilain (L<http://search.cpan.org/~samv/>) wrote
+Lingua::Translate::Babelfish which served as the basis for this module.
+
+=head1 AUTHOR
+
+Dylan Doxey, <dylan.doxey@gmail.com>
+
+=cut
