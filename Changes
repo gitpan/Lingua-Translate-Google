@@ -1,5 +1,8 @@
 Revision history for Perl extension Lingua::Translate::Google.
 
+0.10  Tue Nov  24 20:59:37 2009
+    - Adapted to changes with Google translate service
+
 0.09  Sun Aug  16 16:08:39 2009
     - Fixed bug with selecting src 'auto' in the constructor
     - Fixed a bug with setting options via ->config vs. constructor and ->translate

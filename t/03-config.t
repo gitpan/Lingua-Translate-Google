@@ -23,16 +23,16 @@ my $Detected_Lang;
 
         my $uri = $req->uri();
 
-        if ( $uri eq 'http://translate.google.com/translate_t#' ) {
+        if ( $uri eq 'http://translate.google.com/#' ) {
 
             my $html = qq{
-                <select name=sl>
+                <select class=sllangdropdown name=sl id="old_sl" tabindex=0 >
                     <option value="en">
                     <option value="es">
                     <option value="ja">
                     <option value="de">
                 </select>
-                <select name=tl>
+                <select class=tllangdropdown name=tl id="old_tl" tabindex=0 >
                     <option value="en">
                     <option value="es">
                     <option value="ja">

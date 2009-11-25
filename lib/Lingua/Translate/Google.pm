@@ -8,7 +8,7 @@ package Lingua::Translate::Google;
 # <enki@snowcra.sh>
 #
 
-our $VERSION = '0.09';
+our $VERSION = '0.10';
 
 use strict;
 use warnings;
@@ -33,7 +33,7 @@ my (
     use Readonly;
 
     Readonly $AJAX_URI        => 'http://ajax.googleapis.com/ajax/services/language/translate';
-    Readonly $TRANSLATE_URI   => 'http://translate.google.com/translate_t#';
+    Readonly $TRANSLATE_URI   => 'http://translate.google.com/#';
     Readonly $LANG_DETECT_URI => 'http://www.google.com/uds/GlangDetect';
 
     Readonly %OPTION_DEFAULTS => (
@@ -280,11 +280,10 @@ sub available {
     die 'Google fetch failed; ' . $res->status_line()
         unless $res->is_success();
 
-    # extract out the languages
     my $page = $res->content();
 
     my @source_langs;
-    if ( $page =~ m{<select \s+ name=sl [^>]* > ( .*? ) </select>}msx ) {
+    if ( $page =~ m{<select .+? name=sl .+? > ( .*? ) </select>}msx ) {
 
         my $options = $1;
 
@@ -294,8 +293,9 @@ sub available {
             push @source_langs, $lang;
         }
     }
+
     my @list;
-    if ( $page =~ m{<select \s+ name=tl [^>]* > ( .*? ) </select>}msx ) {
+    if ( $page =~ m{<select .+? name=tl .+? > ( .*? ) </select>}msx ) {
 
         my $options = $1;
 
@@ -333,6 +333,7 @@ sub available {
 
         return @list;
     }
+    
     warn "unable to parse valid language tokens from $TRANSLATE_URI";
     return;
 }

@@ -29,8 +29,8 @@ my $xl8r = Lingua::Translate::Google->new(
 
 can_ok( $xl8r, @methods );
 
-ok(UNIVERSAL::isa($xl8r, 'Lingua::Translate::Google'),
-   'Lingua::Translate::Google->new()');
+ok( UNIVERSAL::isa($xl8r, 'Lingua::Translate::Google'),
+   'Lingua::Translate::Google->new()' );
 
 # Override LWP::UserAgent::request
 # and verify correct output for mocked translation service.
@@ -66,16 +66,16 @@ ok(UNIVERSAL::isa($xl8r, 'Lingua::Translate::Google'),
             if ( $req->uri() =~ m/GlangDetect/xms ) {
                 $res->content( qq({"responseData": {"language":"es"}, "responseStatus": 200}) );
             }
-            elsif ( $req->uri() =~ m/translate_t[#]/xms ) {
+            elsif ( $req->uri() =~ m{ translate[.]google[.]com/[#] }xms ) {
 
                 my $html = qq{
-                    <select name=sl>
+                    <select class=sllangdropdown name=sl id="old_sl" tabindex=0 >
                         <option value="en">
                         <option value="es">
                         <option value="ja">
                         <option value="de">
                     </select>
-                    <select name=tl>
+                    <select class=tllangdropdown name=tl id="old_tl" tabindex=0 >
                         <option value="en">
                         <option value="es">
                         <option value="ja">
@@ -99,6 +99,7 @@ ok(UNIVERSAL::isa($xl8r, 'Lingua::Translate::Google'),
 
     # test basic translation with no API key
     $translated_result = $xl8r->translate($Text_In);
+
     like(
         $translated_result,
         qr/Mein \s+ Luftkissenfahrzeug \s+ ist \s+ voller \s+ Aale\./msx,
