@@ -1,11 +1,11 @@
-Lingua::Translate::Google version 0.10
+Lingua::Translate::Google version 0.11
 ======================================
 
-This module performs natural language translation using Google 
+This module performs natural language translation using Google
 translation web services.
 (http://ajax.googleapis.com/ajax/services/language/translate)
 
-This module is largely a refactored copy of 
+This module is largely a refactored copy of
 Lingua::Translate::Babelfish by Sam Vilain.
 
 INSTALLATION

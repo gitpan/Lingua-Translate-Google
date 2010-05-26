@@ -46,5 +46,3 @@ my $xl8r = Lingua::Translate->new(
 
     is( $result, 'hello world', 'live translation: ja to en works' );
 }
-
-

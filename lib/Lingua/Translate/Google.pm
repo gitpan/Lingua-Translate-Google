@@ -8,7 +8,7 @@ package Lingua::Translate::Google;
 # <enki@snowcra.sh>
 #
 
-our $VERSION = '0.10';
+our $VERSION = '0.11';
 
 use strict;
 use warnings;
@@ -16,8 +16,8 @@ use warnings;
     use Carp;
     use LWP::UserAgent;
     use Unicode::MapUTF8 qw( to_utf8 );
-    use HTTP::Request::Common qw( GET );
-    use URI::Escape qw( uri_escape_utf8 );
+    use HTTP::Request::Common qw( GET POST );
+    use Encode qw( encode_utf8 );
 }
 
 # package globals:
@@ -25,6 +25,7 @@ use vars qw( %valid_langs );
 
 my (
     $AJAX_URI,
+    $CPAN_URI,
     $LANG_DETECT_URI,
     $TRANSLATE_URI,
     %OPTION_DEFAULTS,
@@ -32,17 +33,22 @@ my (
 {
     use Readonly;
 
+    Readonly $CPAN_URI        => 'http://search.cpan.org/~dylan/Lingua-Translate-Google-0.10/';
     Readonly $AJAX_URI        => 'http://ajax.googleapis.com/ajax/services/language/translate';
     Readonly $TRANSLATE_URI   => 'http://translate.google.com/#';
-    Readonly $LANG_DETECT_URI => 'http://www.google.com/uds/GlangDetect';
+    Readonly $LANG_DETECT_URI => 'http://www.google.com/uds/Gtranslate';
+
 
     Readonly %OPTION_DEFAULTS => (
         api_key          => 'notsupplied',
         agent            => __PACKAGE__ . "/$VERSION",
+        referer          => $CPAN_URI,
         retries          => 2,
         src              => 'auto',
         save_auto_lookup => 1,
         _src_is_auto     => 0,
+        format           => 0,
+        userip           => '0.0.0.0',
     );
 }
 
@@ -114,30 +120,29 @@ sub translate {
             if !$self->available( $self->{src}, 'fresh_options' );
     }
 
-    $self->{langpair} = $self->{src} . '%7C' . $self->{dest};
+    $self->{langpair} = $self->{src} . '|' . $self->{dest};
 
     if ( $self->{src} eq 'auto' ) {
 
-        my %params = (
-            context  => 22,
-            v        => '1.0',
-            key      => $self->{api_key},
+        my @params = (
             callback => 'google.language.callbacks.id100',
+            context  => 22,
+            key      => $self->{api_key},
+            langpair => '|' . $self->{dest},
             q        => $text,
+            v        => '1.0',
         );
-        my $query = join '&', map { "$_=" . uri_escape_utf8( $params{$_} ) } keys %params;
+        my $req = POST $LANG_DETECT_URI, \@params;
 
-        my $req = GET "$LANG_DETECT_URI?$query";
-
-        my $res = $self->agent->request($req);
+        my $res = $self->agent()->request($req);
 
         my $json = $res->content() || "";
 
-        if ( $json =~ m/ "language" \s* : \s* "( \w+ )" /xms ) {
+        if ( $json =~ m/ "detectedSourceLanguage" \s* : \s* "( \w+ )" /xms ) {
 
             my $src = $1;
 
-            $self->{langpair} = $src . '%7C' . $self->{dest};
+            $self->{langpair} = $src . '|' . $self->{dest};
 
             if ( $self->{save_auto_lookup} ) {
 
@@ -146,25 +151,27 @@ sub translate {
             }
         }
         else {
-            warn "couldn't auto detect language\n";
+            warn "couldn't auto detect language at $LANG_DETECT_URI";
             return;
         }
     }
 
-    my %params = (
-        v        => '1.0',
-        langpair => $self->{langpair},
-        key      => $self->{api_key},
-        q        => uri_escape_utf8( $text ),
+    my $format
+        = $self->{format}                ? $self->{format}
+        : $text =~ m{</? \w+ [^>]* >}xms ? 'html'
+        :                                  'text';
+
+    my @params = (
+        v            => '1.0',
+        userip       => $self->{userip},
+        langpair     => $self->{langpair},
+        key          => $self->{api_key},
+        resultFormat => $format,
+        q            => encode_utf8( $text ),
     );
+    my $req = POST $AJAX_URI, \@params;
 
-    my $query = join '&', map { "$_=$params{$_}" } keys %params;
-
-    my $req = GET "$AJAX_URI?$query";
-
-    $self->{referer} ||= $AJAX_URI;
-
-    $req->header( 'Referer',        $self->{referer} );
+    $req->header( 'Referer', $self->{referer} );
     $req->header( 'Accept-Charset', 'UTF-8' );
 
     my ( @translated, $error );
@@ -172,7 +179,7 @@ sub translate {
     RETRY:
     for my $attempt ( 1 .. $self->{retries} + 1 ) {
 
-        my $res = $self->agent->request($req);
+        my $res = $self->agent()->request($req);
 
         if ( $res->is_success ) {
 
@@ -207,7 +214,7 @@ sub _extract_text {
 
     # AJAX JSON (googleapis.com) response
     # {"responseData": {"translatedText":"hello world"}, "responseDetails": null, "responseStatus": 200}
-    if ( $response_text =~ m/"translatedText" \s* : \s* "([^"]*)"/xms ) {
+    if ( $response_text =~ m/"translatedText" \s* : \s* "(.*?)(?<!\\)"/xms ) {
         $translated = $1;
     }
 
@@ -228,14 +235,16 @@ sub _extract_text {
             $details .= "; $self->{langpair}";
         }
 
-        die "Google error response: $details\n";
+        die "Google error response: $details";
     }
+
+    $translated =~ s/\\"/"/go;
 
     die "Google response unparsable: $response_text\n"
         if !$translated;
 
     # JS unicode escapes to plain text
-    $translated =~ s/\\u([\d]{4})/chr( sprintf( '%d', hex($1) ) )/eg;
+    $translated =~ s/\\u([0-9a-fA-F]{4})/chr( sprintf( '%d', hex($1) ) )/ego;
 
     # HTML entities to plain text
     $translated =~ s/&#([\d]+);/chr( $1 )/eg;
@@ -275,7 +284,7 @@ sub available {
     $req->header( 'Referer', $TRANSLATE_URI );
     $req->header( 'Accept-Charset', 'UTF-8' );
 
-    my $res = $self->agent->request($req);
+    my $res = $self->agent()->request($req);
 
     die 'Google fetch failed; ' . $res->status_line()
         unless $res->is_success();
@@ -333,7 +342,7 @@ sub available {
 
         return @list;
     }
-    
+
     warn "unable to parse valid language tokens from $TRANSLATE_URI";
     return;
 }
@@ -356,6 +365,7 @@ sub _has_language {
 sub agent {
 
     my $self;
+
     if ( UNIVERSAL::isa( $_[0], __PACKAGE__ ) ) {
         $self = shift;
     }
@@ -363,9 +373,11 @@ sub agent {
     my $ua = _get_option( 'ua' );
 
     unless ( $ua ) {
+
         $ua = LWP::UserAgent->new();
         $ua->agent( _get_option( 'agent' ) );
         $ua->env_proxy();
+
         _set_option( 'ua', $ua );
     }
 
@@ -392,6 +404,8 @@ sub config {
         src                  => 1,
         dest                 => 1,
         save_auto_lookup     => 1,
+        format               => 1,
+        userip               => 1,
     );
 
     OPTION:
@@ -413,6 +427,11 @@ sub config {
 
             croak "$value is not a valid RFC3066 language tag"
                 if !Lingua::Translate::is_language_tag( $value );
+        }
+        elsif ( $option eq 'format' ) {
+
+            croak "format must be either 'text' or 'html'"
+                if $value ne 'text' && $value ne 'html';
         }
 
         _set_option( $option, $value );

@@ -110,7 +110,8 @@ ok( UNIVERSAL::isa($xl8r, 'Lingua::Translate::Google'),
     $API_Key = 'mock_api_key';
     $xl8r->config(
         api_key => $API_Key,
-        referer => 'http://mock.tld/dir'
+        referer => 'http://mock.tld/dir',
+        format  => 'text',
     );
     $translated_result = $xl8r->translate($Text_In);
     like(

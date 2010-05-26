@@ -15,6 +15,8 @@ Lingua::Translate::Google - Translation back-end for Google's translation servic
          back_end => 'Google',
          api_key  => 'YoUrApIkEy',
          referer  => 'http://your.domain.tld/yourdir/',
+         format   => 'text',
+         userip   => '192.168.1.1',
      );
 
  my $xl8r = Lingua::Translate->new( src => 'de', dest => 'en' );
@@ -34,6 +36,7 @@ Lingua::Translate::Google is a translation back-end for Lingua::Translate
 that contacts Google translation service to do the real work.
 The Google translation API is currently at:
 L<http://code.google.com/apis/ajaxlanguage/documentation/#Translation>
+L<http://code.google.com/apis/ajaxlanguage/documentation/#fonje>
 
 Lingua::Translate::Google is normally invoked by Lingua::Translate; there
 should be no need to call it directly.  If you do call it directly, you will
@@ -81,6 +84,15 @@ Also see: L<LIMITATIONS>
 
 Destination Language
 
+=item format
+
+Either 'html' or 'text'. This indicates the type of content your sending 
+Google's way. If you omit, then a guess is made based on the submitted text.
+
+=item userip
+
+This is the IP address of your end user which Google encourages you to supply.
+
 =back
 
 Other options that may be passed to the config() function (see below) may
@@ -97,7 +109,7 @@ is the source language and YY is the destination. If you want the english
 name of a language tag, call I18N::LangTags::List::name() on it.
 See L<I18N::LangTags::List>.
 
-This method contacts Google (at http://translate.google.com/translate_t) and
+This method contacts Google (at http://translate.google.com/#) and
 parses from the HTML the available language pairs. The list of language
 pairs is cached for subsequent calls.
 
@@ -145,7 +157,7 @@ you got your API key, or perhaps the URL where your application exists.
 The User-Agent string to use when contacting Google.
 
 The default value is:
-Lingua::Translate::Google/0.09
+Lingua::Translate::Google/0.10
 
 =item retries
 
@@ -222,6 +234,9 @@ Perl itself.
 
 Sam Vilain (L<http://search.cpan.org/~samv/>) wrote
 Lingua::Translate::Babelfish which served as the basis for this module.
+
+Andrew Nugged (L<http://ladoshki.com/>) provided some crucial bug fixes
+and drove me to release 0.11.
 
 =head1 AUTHOR
 

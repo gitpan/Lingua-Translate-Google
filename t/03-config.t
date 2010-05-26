@@ -16,12 +16,13 @@ my $Detected_Lang;
     no warnings qw( once redefine );
 
     # Intercepts the network request and returns a sensible value.
-    # Thus, the test assumes that LWP::UserAgent::request and Google
-    # working correctly.
     *LWP::UserAgent::request = sub {
         my ($self,$req) = @_;
 
         my $uri = $req->uri();
+
+        my ($src,$dest) = $req->content() =~ m{ \W langpair = ( \w+ ) %7C ( \w+ ) & }xms;
+        my ($txt)       = $req->content() =~ m{ \W q = ( .+? ) & }xms;
 
         if ( $uri eq 'http://translate.google.com/#' ) {
 
@@ -42,28 +43,23 @@ my $Detected_Lang;
 
             my $res = HTTP::Response->new( 200 );
             $res->content( $html );
+
             return $res;
         }
-        elsif ( $uri =~ m{\A http://www[.]google[.]com/uds/GlangDetect[?]q=( .+? )& }xms ) {
-
-            my $txt = $1;
+        elsif ( $uri eq 'http://www.google.com/uds/Gtranslate' ) {
 
             my $lang
                 = $txt =~ m{japanese} ? 'ja'
                 : $txt =~ m{english}  ? 'en'
                 :                       'xx';
 
-            my $json = qq{"language": "$lang"};
+            my $json = qq{"detectedSourceLanguage": "$lang"};
 
             my $res = HTTP::Response->new( 200 );
             $res->content( $json );
             return $res;
         }
-        elsif (   $uri =~ m{ http://ajax[.]googleapis[.]com/ajax/services/language/translate }xms
-               && $uri =~ m{ langpair=( \w+ ) %7C ( \w+ ) }xms )
-        {
-            my $src  = $1;
-            my $dest = $2;
+        elsif ( $uri eq 'http://ajax.googleapis.com/ajax/services/language/translate' ) {
 
             $Submitted_LangPair = "$src|$dest";
 

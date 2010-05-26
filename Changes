@@ -1,5 +1,8 @@
 Revision history for Perl extension Lingua::Translate::Google.
 
+0.11  Tue May  25 21:02:58 2010
+    - Adopted some corrections offered by Andrew Nugged
+
 0.10  Tue Nov  24 20:59:37 2009
     - Adapted to changes with Google translate service
 
