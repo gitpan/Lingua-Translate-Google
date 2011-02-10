@@ -8,7 +8,7 @@ package Lingua::Translate::Google;
 # <enki@snowcra.sh>
 #
 
-our $VERSION = '0.11';
+our $VERSION = '0.12';
 
 use strict;
 use warnings;
@@ -33,7 +33,10 @@ my (
 {
     use Readonly;
 
-    Readonly $CPAN_URI        => 'http://search.cpan.org/~dylan/Lingua-Translate-Google-0.10/';
+    my $pkg = __PACKAGE__ . "::$VERSION";
+    $pkg =~ s{::}{-}g;
+
+    Readonly $CPAN_URI        => "http://search.cpan.org/~dylan/$pkg/";
     Readonly $AJAX_URI        => 'http://ajax.googleapis.com/ajax/services/language/translate';
     Readonly $TRANSLATE_URI   => 'http://translate.google.com/#';
     Readonly $LANG_DETECT_URI => 'http://www.google.com/uds/Gtranslate';
@@ -203,7 +206,19 @@ sub translate {
     die "Translation failed after $self->{retries} attempts ($error)"
         if !@translated;
 
-    return join ' ', @translated;
+    my $result = join ' ', @translated;
+
+    if (wantarray) {
+
+        return (
+            src    => $self->{src},
+            dest   => $self->{dest},
+            q      => $text,
+            result => ( join ' ', @translated ),
+        );
+    }
+
+    return $result;
 }
 
 # Extracts the translated text from the given Google response text.

@@ -1,5 +1,8 @@
 Revision history for Perl extension Lingua::Translate::Google.
 
+0.12  Wed Feb  09 18:27:26 2011
+    - Added a list context return for the translate method. 
+
 0.11  Tue May  25 21:02:58 2010
     - Adopted some corrections offered by Andrew Nugged
 

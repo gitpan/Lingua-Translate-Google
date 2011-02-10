@@ -124,6 +124,27 @@ Translates the given text, or die's on any kind of error.
 
 Incomming $text should be UTF-8 encoded.
 
+If you may also call translate in list context to get a hash of information
+about the translation query. In order for this to work you must bypass
+the Lingua::Translate interface and create an instance of 
+Lingua::Translate::Google directly.
+
+ my $xl8r = Lingua::Translate::Google->new( src => 'auto', dest => 'en' );
+
+ my %xl8td = $xl8r->translate('Mein Luftkissenfahrzeug ist voller Aale');
+
+ print 'xl8td: ', Data::Dumper::Dumper( \%xl8td );
+
+    xl8td: $VAR1 = {
+        'dest'   => 'en',
+        'q'      => 'Mein Luftkissenfahrzeug ist voller Aale',
+        'src'    => 'de',
+        'result' => 'My hovercraft is full of eels'
+    };
+
+This feature is useful if you're specifying 'auto' and you want to see 
+what Google identifies as the source language.
+
 =head2 agent() : LWP::UserAgent
 
 Returns the LWP::UserAgent object used to contact Google.
@@ -177,6 +198,9 @@ The destination language. Same as constructor dest option.
 Default value is true. When using the 'auto' src option, this causes the result of the first
 language detect query to be saved and used on subsequent calls to translate. Set this option 
 to false to require that each call to translate redetect the source language. 
+
+If you're doing a lot of queries and the source language is expected to be the same for 
+all of them then this option should reduce the number of HTTP requests by 1/2 - 1.
 
 =back
 
