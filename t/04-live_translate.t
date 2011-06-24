@@ -26,7 +26,12 @@ my $xl8r = Lingua::Translate->new(
 {
     my $result = lc $xl8r->translate('hello world');
 
-    is( $result, 'hola mundo', 'live translation: auto en to es works' );
+    my @expect = qw( hola mundo );
+
+    my $expect = @expect;
+    my $got    = grep {$_} map { -1 != ( index $result, $_ ) ? 1 : 0 } @expect;
+
+    is( $got, $expect, 'live translation: auto en to es works' );
 }
 
 # auto es to en
@@ -35,7 +40,12 @@ my $xl8r = Lingua::Translate->new(
 
     my $result = lc $xl8r->translate('Mi aerodeslizador está lleno de anguilas');
 
-    is( $result, 'my hovercraft is full of eels', 'live translation: auto es to en works' );
+    my @expect = qw( my hovercraft is full of eels );
+
+    my $expect = @expect;
+    my $got    = grep {$_} map { -1 != ( index $result, $_ ) ? 1 : 0 } @expect;
+
+    is( $got, $expect, 'live translation: auto es to en works' );
 }
 
 # ja to en
@@ -44,5 +54,10 @@ my $xl8r = Lingua::Translate->new(
 
     my $result = lc $xl8r->translate('こんにちは世界');
 
-    is( $result, 'hello world', 'live translation: ja to en works' );
+    my @expect = qw( hello world );
+
+    my $expect = @expect;
+    my $got    = grep {$_} map { -1 != ( index $result, $_ ) ? 1 : 0 } @expect;
+
+    is( $got, $expect, 'live translation: ja to en works' );
 }
