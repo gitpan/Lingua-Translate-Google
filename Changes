@@ -1,5 +1,8 @@
 Revision history for Perl extension Lingua::Translate::Google.
 
+0.15  Fri Aug  12 20:56:31 2011
+    - Fixed to adapt to changes on google.com. 
+
 0.14  Sat Jul  01 10:37:11 2011
     - Updated dependency list: Readonly ver 1.03
 

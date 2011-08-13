@@ -1,14 +1,6 @@
 package Lingua::Translate::Google;
 
-# Copyright (c) 2008, Dylan Doxey.  All rights reserved. This program
-# is free software; you may use it under the same terms as Perl
-# itself.
-#
-# Revised copy of Lingua::Translate::Babelfish by Sam Vilain
-# <enki@snowcra.sh>
-#
-
-our $VERSION = '0.14';
+our $VERSION = '0.15';
 
 use strict;
 use warnings;
@@ -307,11 +299,14 @@ sub available {
     my $page = $res->content();
 
     my @source_langs;
+
+    # <select id=gt-sl name=sl tabindex=0 >
     if ( $page =~ m{<select .+? name=sl .+? > ( .*? ) </select>}msx ) {
 
         my $options = $1;
 
-        while ( $options =~ m{<option \s+ value="([^"]+)">}msxg ) {
+        # <option value=af>
+        while ( $options =~ m{<option \s+ value="?( \S+? )"?>}msxg ) {
 
             my $lang = $1;
             push @source_langs, $lang;
@@ -323,7 +318,7 @@ sub available {
 
         my $options = $1;
 
-        while ( $options =~ m{<option \s+ value="([^"]+)">}msxg ) {
+        while ( $options =~ m{<option \s+ value="?( \S+? )"?>}msxg ) {
 
             my $dest = $1;
 
