@@ -4,10 +4,5 @@ MANIFEST
 README
 lib/Lingua/Translate/Google.pm
 lib/Lingua/Translate/Google.pod
-t/01-google.t
-t/02-available_langs.t
-t/03-config.t
-t/04-live_translate.t
-t/05-auto_option.t
-t/06-auto_option.t
-t/07-auto_option.t
+t/basic.t
+t/fatal.t

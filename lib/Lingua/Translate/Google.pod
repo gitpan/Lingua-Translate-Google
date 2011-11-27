@@ -1,47 +1,39 @@
-use utf8;
-
-=encoding utf-8
-
 =head1 NAME
 
 Lingua::Translate::Google - Translation back-end for Google's translation service.
 
 =head1 SYNOPSIS
 
- use Lingua::Translate;
+  use Lingua::Translate;
 
- Lingua::Translate::config
-     (
-         back_end => 'Google',
-         api_key  => 'YoUrApIkEy',
-         referer  => 'http://your.domain.tld/yourdir/',
-         format   => 'text',
-         userip   => '192.168.1.1',
-     );
+  Lingua::Translate::config(
+      back_end => 'Google',
+      api_key  => '<your API key>',
+      agent    => '<optional custom useragent string>',
+  );
 
- my $xl8r = Lingua::Translate->new( src => 'de', dest => 'en' );
+  my $xl8r = Lingua::Translate->new( src => 'de', dest => 'en' );
 
- # prints 'My hovercraft is full of eels'
- print $xl8r->translate('Mein Luftkissenfahrzeug ist voller Aale') . "\n";
+  # prints 'My hovercraft is full of eels'
+  print $xl8r->translate('Mein Luftkissenfahrzeug ist voller Aale'), "\n";
 
- # switch to auto detect for source language
- $xl8r->config( src => 'auto' );
+  # switch to auto detect for source language
+  $xl8r->config( src => 'auto' );
 
- # prints 'My hovercraft is full of eels'
- print $xl8r->translate('Mi aerodeslizador está lleno de anguilas') . "\n";
+  # prints 'My hovercraft is full of eels'
+  print $xl8r->translate('Mi aerodeslizador está lleno de anguilas'), "\n";
 
 =head1 DESCRIPTION
 
 Lingua::Translate::Google is a translation back-end for Lingua::Translate
 that contacts Google translation service to do the real work.
-The Google translation API is currently at:
-L<http://code.google.com/apis/ajaxlanguage/documentation/#Translation>
-L<http://code.google.com/apis/ajaxlanguage/documentation/#fonje>
 
 Lingua::Translate::Google is normally invoked by Lingua::Translate; there
 should be no need to call it directly.  If you do call it directly, you will
 lose the ability to easily switch your programs over to alternate back-ends
 that are later produced.
+
+This module is mostly a wrapper for the L<WWW::Google::Translate> module.
 
 =over
 
@@ -50,140 +42,70 @@ that are later produced.
 By using Google services (either directly or via this module) you are
 agreeing to the Google terms of service.
 
-L<http://www.google.com/accounts/TOS>
+L<http://code.google.com/apis/language/translate/v2/terms.html>
 
-=item Referer URL
-
-Google asks that you include a meaningful referer value to identify the
-API users.
-
-=item API key
-
-The API key is optional.
-
-L<http://code.google.com/apis/ajaxfeeds/signup.html>
+The Google Translate API v2 is a paid service. You will need to obtain an
+API key and establish a Google Wallet account.
 
 =back
 
 =head1 CONSTRUCTOR
 
-=head2 new( src => $lang, dest => $lang )
+=head2 new( key => $api_key, src => $lang, dest => $lang, agent => $agent )
 
-Creates a new translation handle. Determines whether the requested language
-pair is available and will croak if not.
-
-=over
-
-=item src
-
-A valid RFC-3066 language tag or 'auto'.
-See: L<I18N::LangTags>
-Also see: L<LIMITATIONS>
-
-=item dest
-
-Destination Language
-
-=item format
-
-Either 'html' or 'text'. This indicates the type of content your sending 
-Google's way. If you omit, then a guess is made based on the submitted text.
-
-=item userip
-
-This is the IP address of your end user which Google encourages you to supply.
-
-=back
-
-Other options that may be passed to the config() function (see below) may
-also be passed as arguments to this constructor.
+Creates a new translation handle. Subsequent calls to the translate method
+will use the src and dest values you provide here.
 
 =head1 METHODS
 
 The following methods may be called on Lingua::Translate::Google objects.
 
-=head2 available() : @list
+=head2 available( [ $lang ] [, $dest_lang ] )
+ 
+Use this method to check about supported languages relative to the current
+destination language.
 
-Returns a list of available language pairs, in the form of 'XX_YY', where XX
-is the source language and YY is the destination. If you want the english
-name of a language tag, call I18N::LangTags::List::name() on it.
-See L<I18N::LangTags::List>.
+  $xl8r->config( src => $src, dest => $dest );
 
-This method contacts Google (at http://translate.google.com/#) and
-parses from the HTML the available language pairs. The list of language
-pairs is cached for subsequent calls.
+  die "can't translate from 'he' to $dest"
+      if !$xl8tr->available('he');
 
-You may also use this method to see if a given language tag is available.
+  my @translatable_from_langs = $xl8r->available(); # to $dest
 
- die "doesn't have 'he'"
-     if !$xl8tr->available('he');
+NOTE: The behavior of this method has changed since version 0.15.
 
-=head2 translate($text) : $translated
+=head2 translate( $text )
 
-Translates the given text, or die's on any kind of error.
+Translates the given text.
 
-Incomming $text should be UTF-8 encoded.
+  my $result = $xl8r->translate( $text );
 
 If you may also call translate in list context to get a hash of information
 about the translation query. In order for this to work you must bypass
 the Lingua::Translate interface and create an instance of 
 Lingua::Translate::Google directly.
 
- my $xl8r = Lingua::Translate::Google->new( src => 'auto', dest => 'en' );
+  my $xl8r = Lingua::Translate::Google->new( src => 'auto', dest => 'en' );
 
- my %xl8td = $xl8r->translate('Mein Luftkissenfahrzeug ist voller Aale');
+  my %xl8td = $xl8r->translate('Mein Luftkissenfahrzeug ist voller Aale');
 
- print 'xl8td: ', Data::Dumper::Dumper( \%xl8td );
+  print 'xl8td: ', Data::Dumper::Dumper( \%xl8td );
 
-    xl8td: $VAR1 = {
-        'dest'   => 'en',
-        'q'      => 'Mein Luftkissenfahrzeug ist voller Aale',
-        'src'    => 'de',
-        'result' => 'My hovercraft is full of eels'
-    };
+      xl8td: $VAR1 = {
+          dest   => 'en',
+          q      => 'Mein Luftkissenfahrzeug ist voller Aale',
+          src    => 'de',
+          result => 'My hovercraft is full of eels'
+      };
 
 This feature is useful if you're specifying 'auto' and you want to see 
 what Google identifies as the source language.
-
-=head2 agent() : LWP::UserAgent
-
-Returns the LWP::UserAgent object used to contact Google.
-
-=head1 CONFIG OPTIONS
 
 =head2 config( option => $value, )
 
 Use this to set any of these options:
 
 =over
-
-=item api_key
-
-The API key is not required. But you're invited to use one as a secondary
-means of identifying yourself.
-
-See: L<http://code.google.com/apis/ajaxfeeds/signup.html>
-
-=item referer
-
-The value for the referer header in HTTP requests sent to the Google
-translation service.
-
-Google requests that you provide a valid referer string as the primary means
-of identifying yourself. You will probably use the URL you specified when
-you got your API key, or perhaps the URL where your application exists.
-
-=item agent
-
-The User-Agent string to use when contacting Google.
-
-The default value is:
-Lingua::Translate::Google/0.10
-
-=item retries
-
-The number of times to retry contacting Google if the first attempt fails.
-The default value is 2.
 
 =item src
 
@@ -193,14 +115,9 @@ The source language. Same as constructor src option.
 
 The destination language. Same as constructor dest option.
 
-=item save_auto_lookup
+=item agent
 
-Default value is true. When using the 'auto' src option, this causes the result of the first
-language detect query to be saved and used on subsequent calls to translate. Set this option 
-to false to require that each call to translate redetect the source language. 
-
-If you're doing a lot of queries and the source language is expected to be the same for 
-all of them then this option should reduce the number of HTTP requests by 1/2 - 1.
+User agent string used by the HTTP client which makes the API requests.
 
 =back
 
@@ -246,21 +163,14 @@ This will fail:
 
 =head1 SEE ALSO
 
-L<Lingua::Translate>, L<Lingua::Translate::Babelfish>,
-L<LWP::UserAgent>, L<Unicode::MapUTF8>
+L<Lingua::Translate>
+L<Lingua::Translate::Babelfish>
+L<WWW::Google::Translate>
 
 =head1 LICENSE
 
 This is free software, and can be used/modified under the same terms as
 Perl itself.
-
-=head1 ACKNOWLEDGEMENTS
-
-Sam Vilain (L<http://search.cpan.org/~samv/>) wrote
-Lingua::Translate::Babelfish which served as the basis for this module.
-
-Andrew Nugged (L<http://ladoshki.com/>) provided some crucial bug fixes
-and drove me to release 0.11.
 
 =head1 AUTHOR
 

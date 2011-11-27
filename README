@@ -1,12 +1,9 @@
-Lingua::Translate::Google version 0.15
+Lingua::Translate::Google version 0.20
 ======================================
 
-This module performs natural language translation using Google
-translation web services.
-(http://ajax.googleapis.com/ajax/services/language/translate)
+This module is a wrapper for WWW::Google::Translate
+which provides the Google plugin for Lingua::Translate.
 
-This module is largely a refactored copy of
-Lingua::Translate::Babelfish by Sam Vilain.
 
 INSTALLATION
 
@@ -22,14 +19,11 @@ DEPENDENCIES
 This module requires these other modules and libraries:
 
     Carp
-    HTTP::Request::Common
     I18N::LangTags
     Lingua::Translate
-    LWP::UserAgent
     Readonly
     Test::More
     Unicode::MapUTF8
-    URI::Escape
 
 ACKNOWLEDGEMENTS
    This module is based on Lingua::Translate::Babelfish by Sam Vilain <enki@snowcra.sh>.
