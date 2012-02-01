@@ -1,6 +1,6 @@
 package Lingua::Translate::Google;
 
-our $VERSION = '0.20';
+our $VERSION = '0.21';
 
 use strict;
 use warnings;
@@ -10,7 +10,7 @@ use warnings;
     use WWW::Google::Translate;
 }
 
-my ( $DEFAULT_AGENT );
+my ($DEFAULT_AGENT);
 {
     Readonly $DEFAULT_AGENT => __PACKAGE__ . "/v$VERSION";
 }
@@ -25,29 +25,58 @@ BEGIN {
     no warnings 'redefine';
 
     *I18N::LangTags::is_language_tag = sub {
-        my ( $tag ) = @_;
+        my ($tag) = @_;
         return 1
             if $tag eq 'auto';
-        return $is_rc->( $tag );
+        return $is_rc->($tag);
     };
+}
+
+{
+    my %self = (
+        src     => 'auto',
+        dest    => 'en',
+        api_key => 0,
+        agent   => $DEFAULT_AGENT,
+    );
+
+    sub _get_self {
+        my ($param_rh) = @_;
+
+        if ($param_rh) {
+
+            for my $key ( keys %{$param_rh} ) {
+
+                $self{$key} = $param_rh->{$key};
+            }
+        }
+
+        return \%self;
+    }
 }
 
 sub new {
     my ( $class, %config ) = @_;
 
+    my $self = _get_self();
+
     my $default_source
         = $config{src}
         || $config{default_source}
-        || 'auto';
+        || $self->{src};
 
     my $default_target
         = $config{dest}
         || $config{default_target}
-        || 'en';
+        || $self->{dest};
 
-    my $key = $config{api_key} || $config{key};
+    my $key
+        = $config{api_key}
+        || $config{key}
+        || $self->{api_key};
 
-    my $agent = $config{agent} || $DEFAULT_AGENT;
+    my $agent = $config{agent}
+        || $self->{agent};
 
     croak "key parameter must be your Google API key"
         if !$key;
@@ -58,22 +87,32 @@ sub new {
         default_source => $default_source,
         agent          => $agent,
     );
-    my $wgt = WWW::Google::Translate->new( \%param );
+    $self->{wgt} = WWW::Google::Translate->new( \%param );
 
-    my %self = (
-        wgt  => $wgt,
-        src  => $default_source,
-        dest => $default_target,
-    );
-    return bless \%self, $class;
+    return bless $self, $class;
 }
 
 sub config {
-    my ( $self, %param ) = @_;
+    my ( $self, %param );
+
+    if ( @_ % 2 == 0 ) {
+
+        (%param) = @_;
+
+        $self = _get_self();
+    }
+    else {
+
+        ( $self, %param ) = @_;
+    }
 
     for my $p ( keys %param ) {
 
-        if ( !exists $self->{$p} ) {
+        if ( exists $self->{$p} ) {
+
+            $self->{$p} ||= $param{$p};
+        }
+        else {
 
             carp "$p is not a supported parameter";
         }
@@ -102,7 +141,7 @@ sub config {
 }
 
 sub translate {
-    my ($self,$text) = @_;
+    my ( $self, $text ) = @_;
 
     UNIVERSAL::isa( $self, __PACKAGE__ )
         or croak __PACKAGE__ . '::translate() called as function';
@@ -118,7 +157,6 @@ sub translate {
         croak "$self->{src} is not available on Google translate"
             if !$self->available( $self->{src} );
     }
-
 
     if ( $self->{src} eq 'auto' ) {
 
@@ -182,7 +220,7 @@ sub available {
     UNIVERSAL::isa( $self, __PACKAGE__ )
         or croak __PACKAGE__ . '::available() called as function';
 
-    if ( $lang_inquiry ) {
+    if ($lang_inquiry) {
 
         require I18N::LangTags;
 

@@ -1,4 +1,4 @@
-Lingua::Translate::Google version 0.20
+Lingua::Translate::Google version 0.21
 ======================================
 
 This module is a wrapper for WWW::Google::Translate

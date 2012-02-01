@@ -101,7 +101,7 @@ Lingua::Translate::Google directly.
 This feature is useful if you're specifying 'auto' and you want to see 
 what Google identifies as the source language.
 
-=head2 config( option => $value, )
+=head2 config( option => $value )
 
 Use this to set any of these options:
 
