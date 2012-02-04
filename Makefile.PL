@@ -10,6 +10,7 @@ WriteMakefile(
         'Lingua::Translate'      => 0,
         'Readonly'               => 1.03,
         'Test::More'             => 0,
+        'Data::Dumper'           => 0,
     },
     VERSION_FROM => "lib/Lingua/Translate/Google.pm",
 )

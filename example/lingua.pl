@@ -2,7 +2,11 @@
 
 use strict;
 use warnings;
-use Lingua::Translate::Google;
+{
+    use Data::Dumper;
+    use Lingua::Translate::Google;
+    use English qw( -no_match_vars $PROGRAM_NAME );
+}
 
 my ( $key, $src, $dest, $q );
 
@@ -49,8 +53,12 @@ while ( my $arg = shift @ARGV ) {
     }
 }
 
-die "q, dest, src and key are all required"
-    if !$q || !$src || !$dest || !$key;
+if ( !$q || !$src || !$dest || !$key ) {
+
+    die <<"END_USAGE";
+$PROGRAM_NAME --key <api key> --src <lang> --dest <lang> --q "Hello world"
+END_USAGE
+}
 
 my $t = Lingua::Translate::Google->new(
     key  => $key,
@@ -58,8 +66,10 @@ my $t = Lingua::Translate::Google->new(
     dest => $dest,
 );
 
-my %r = $t->translate( $q );
+my %r = $t->translate($q);
 
-print Dumper( \%r );
+print "\n", Dumper( \%r );
+
+print "\nresult:\n", $r{result}, "\n";
 
 __END__

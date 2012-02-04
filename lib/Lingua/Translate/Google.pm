@@ -1,6 +1,6 @@
 package Lingua::Translate::Google;
 
-our $VERSION = '0.21';
+our $VERSION = '0.22';
 
 use strict;
 use warnings;
@@ -40,7 +40,7 @@ BEGIN {
         agent   => $DEFAULT_AGENT,
     );
 
-    sub _get_self {
+    sub _true_self {
         my ($param_rh) = @_;
 
         if ($param_rh) {
@@ -58,19 +58,19 @@ BEGIN {
 sub new {
     my ( $class, %config ) = @_;
 
-    my $self = _get_self();
+    my $self = _true_self();
 
-    my $default_source
+    my $default_source 
         = $config{src}
         || $config{default_source}
         || $self->{src};
 
-    my $default_target
+    my $default_target 
         = $config{dest}
         || $config{default_target}
         || $self->{dest};
 
-    my $key
+    my $key 
         = $config{api_key}
         || $config{key}
         || $self->{api_key};
@@ -87,7 +87,14 @@ sub new {
         default_source => $default_source,
         agent          => $agent,
     );
-    $self->{wgt} = WWW::Google::Translate->new( \%param );
+    $self = _true_self(
+        {   wgt     => WWW::Google::Translate->new( \%param ),
+            src     => $default_source,
+            dest    => $default_target,
+            api_key => $key,
+            agent   => $agent,
+        }
+    );
 
     return bless $self, $class;
 }
@@ -99,7 +106,7 @@ sub config {
 
         (%param) = @_;
 
-        $self = _get_self();
+        $self = _true_self();
     }
     else {
 
@@ -145,6 +152,8 @@ sub translate {
 
     UNIVERSAL::isa( $self, __PACKAGE__ )
         or croak __PACKAGE__ . '::translate() called as function';
+
+    my $true_self = _true_self();
 
     croak "no dest language specified\n"
         if !defined $self->{dest};

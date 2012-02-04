@@ -1,5 +1,8 @@
 Revision history for Perl extension Lingua::Translate::Google.
 
+0.22  Sat Feb  04 14:55:19 2012
+    - bug fix in parameter handling
+
 0.21  Tue Jan  31 19:25:35 2012
     - fix for "api_key" as a HASH ref bug
 
@@ -7,7 +10,7 @@ Revision history for Perl extension Lingua::Translate::Google.
     - Now based on WWW::Google::Translate
 
 0.15  Fri Aug  12 20:56:31 2011
-    - Fixed to adapt to changes on google.com. 
+    - Fixed to adapt to changes on google.com.
 
 0.14  Sat Jul  01 10:37:11 2011
     - Updated dependency list: Readonly ver 1.03

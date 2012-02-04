@@ -1,4 +1,4 @@
-Lingua::Translate::Google version 0.21
+Lingua::Translate::Google version 0.22
 ======================================
 
 This module is a wrapper for WWW::Google::Translate
@@ -19,6 +19,7 @@ DEPENDENCIES
 This module requires these other modules and libraries:
 
     Carp
+    Data::Dumper
     I18N::LangTags
     Lingua::Translate
     Readonly
